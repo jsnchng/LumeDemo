@@ -99,6 +99,9 @@ target_link_libraries(LumeDemo PRIVATE
 
 add_custom_target(CopyAssets ALL
   COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CMAKE_SOURCE_DIR}/assets/app
+          ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/app
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/assets/glTF
           ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/glTF
   COMMAND ${CMAKE_COMMAND} -E copy_directory

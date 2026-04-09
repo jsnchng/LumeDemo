@@ -123,7 +123,12 @@ public:
         ecs_->Initialize();
         transformManager_ = GetManager<ITransformComponentManager>(*ecs_);
         cameraManager_ = GetManager<ICameraComponentManager>(*ecs_);
-        renderNodeGraph_ = CreateRenderNodeGraph("assets://app/renderNodeGraph.json");
+        // .rng indicates that it is the same as the original file in 3d/rendernodegraphs
+        sceneRng_ = CreateRenderNodeGraph("assets://app/core3d_rng_scene.rng");
+        // .json means the file has been changed from that in 3d/rendernodegraphs
+        cameraSceneLwrpRNG_ = CreateRenderNodeGraph("assets://app/core3d_rng_cam_scene_lwrp.json");
+        // .json means the file has been changed from that in 3d/rendernodegraphs
+        cameraSceneDeferredRNG_ = CreateRenderNodeGraph("assets://app/core3d_rng_cam_scene_deferred.json");
         {
             auto* nodeSystem = GetSystem<INodeSystem>(*ecs_);
             auto rootNode = nodeSystem->CreateNode();
@@ -165,8 +170,13 @@ public:
         const bool needRender = engine_->TickFrame(array_view(&ecs, 1));
         if (needRender) {
             IRenderer& renderer = renderContext_->GetRenderer();
-            const auto ecsRngs = graphicsContext_->GetRenderNodeGraphs(*ecs);
-            vector<RenderHandleReference> rngs(ecsRngs.begin(), ecsRngs.end());
+            vector<RenderHandleReference> rngs{ sceneRng_ };
+#define DEFERRED
+#if defined(DEFERRED)
+            rngs.emplace_back(cameraSceneDeferredRNG_);
+#else
+            rngs.emplace_back(cameraSceneLwrpRNG_);
+#endif
             renderer.RenderFrame(rngs);
         }
     }
@@ -194,12 +204,6 @@ private:
             auto cameraHandle = cameraManager_->Write(activeCamera_);
             if (cameraHandle) {
                 cameraHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
-                cameraHandle->pipelineFlags |= CameraComponent::PipelineFlagBits::CLEAR_COLOR_BIT;
-                cameraHandle->pipelineFlags |= CameraComponent::PipelineFlagBits::JITTER_BIT |
-                                               CameraComponent::PipelineFlagBits::HISTORY_BIT |
-                                               CameraComponent::PipelineFlagBits::VELOCITY_OUTPUT_BIT |
-                                               CameraComponent::PipelineFlagBits::DEPTH_OUTPUT_BIT;
-                cameraHandle->renderingPipeline = CameraComponent::RenderingPipeline::FORWARD;
             }
             const auto& sceneUtil = graphicsContext_->GetSceneUtil();
             sceneUtil.UpdateCameraViewport(*ecs_, activeCamera_, { windowWidth_, windowHeight_ }, false, 60.f, 1.f);
@@ -211,7 +215,9 @@ private:
     IEcs::Ptr ecs_;
     IRenderContext::Ptr renderContext_;
     IGraphicsContext::Ptr graphicsContext_;
-    RenderHandleReference renderNodeGraph_;
+    RenderHandleReference sceneRng_;
+    RenderHandleReference cameraSceneLwrpRNG_;
+    RenderHandleReference cameraSceneDeferredRNG_;
     uint32_t windowWidth_;
     uint32_t windowHeight_;
     bool autoAspect_;

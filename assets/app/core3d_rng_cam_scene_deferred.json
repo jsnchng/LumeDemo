@@ -1,0 +1,200 @@
+{
+    "compatibility_info": {
+        "version": "22.00",
+        "type": "rendernodegraph"
+    },
+    "renderNodeGraphName": "",
+    "nodes": [
+        {
+            "typeName": "RenderNodeCreateDefaultCameraGpuImages",
+            "nodeName": "RenderNodeCreateDefaultCameraGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "output",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "depth",
+                    "format": "d32_sfloat",
+                    "usageFlags": "depth_stencil_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "color",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "velocity_normal",
+                    "format": "r16g16b16a16_sfloat",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "history",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "usageFlags": "color_attachment | input_attachment | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "base_color",
+                    "format": "r8g8b8a8_srgb",
+                    "usageFlags": "color_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "material",
+                    "format": "r8g8b8a8_unorm",
+                    "usageFlags": "color_attachment | input_attachment | transient_attachment",
+                    "memoryPropertyFlags": "device_local | lazily_allocated",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeDefaultCameraController",
+            "nodeName": "RenderNodeDefaultCameraController"
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialRenderSlot",
+            "nodeName": "CORE3D_RN_CAM_DM_SO_DF",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "renderSlot": "CORE3D_RS_DM_DF_OPAQUE",
+            "renderSlotSortType": "by_material",
+            "renderSlotCullType": "view_frustum_cull",
+            "nodeFlags": 0,
+            "nodeMaterialDiscardFlags": 8192,
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "clear",
+                        "clearDepth": [ 1.0, 0 ],
+                        "name": "depth"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "name": "color"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "name": "velocity_normal"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "name": "base_color"
+                    },
+                    {
+                        "loadOp": "dont_care",
+                        "name": "material"
+                    }
+                ],
+                "subpassIndex": 0,
+                "subpassCount": 2,
+                "subpass": {
+                    "depthAttachmentIndex": 0,
+                    "colorAttachmentIndices": [ 1, 2, 3, 4 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeDefaultMaterialDeferredShading",
+            "nodeName": "CORE3D_RN_CAM_DM_DS_DF",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "nodeFlags": 0,
+            "shader": "3dshaders://shader/core3d_dm_fullscreen_deferred_shading.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "name": "depth"
+                    },
+                    {
+                        "name": "color"
+                    },
+                    {
+                        "name": "velocity_normal"
+                    },
+                    {
+                        "name": "base_color"
+                    },
+                    {
+                        "name": "material"
+                    }
+                ],
+                "subpassIndex": 1,
+                "subpassCount": 2,
+                "subpass": {
+                    "colorAttachmentIndices": [ 1 ],
+                    "inputAttachmentIndices": [ 0, 2, 3, 4 ]
+                }
+            }
+        },
+        {
+            "typeName": "RenderNodeBackBuffer",
+            "nodeName": "RenderNodeBackBuffer",
+            "renderDataStore": {
+                "dataStoreName": "RenderDataStorePod",
+                "typeName": "RenderDataStorePod",
+                "configurationName": "CORE3D_POST_PROCESS_CAM"
+            },
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            },
+            "shader": "rendershaders://shader/fullscreen_copy.shader",
+            "renderPass": {
+                "attachments": [
+                    {
+                        "loadOp": "dont_care",
+                        "storeOp": "store",
+                        "name": "CORE_DEFAULT_BACKBUFFER"
+                    }
+                ],
+                "subpass": {
+                    "colorAttachmentIndices": 0
+                }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 0,
+                        "binding": 1,
+                        "name": "color"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 0,
+                        "binding": 0,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
+            }
+        }
+    ]
+}
