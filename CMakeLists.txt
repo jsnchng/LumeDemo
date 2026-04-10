@@ -24,8 +24,6 @@ endif()
 if(NOT TARGET AGPEngine::AGPEngineAPI)
   add_subdirectory(LumeEngine)
   set(ENGINE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LumeEngine")
-else()
-  get_filename_component(ENGINE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../LumeEngine" ABSOLUTE)
 endif()
 
 #
@@ -33,6 +31,7 @@ endif()
 #
 if(NOT TARGET AGPRender::AGPRenderAPI)
   add_subdirectory(LumeRender)
+  set(RENDER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/LumeRender")
 endif()
 
 #
@@ -40,6 +39,23 @@ endif()
 #
 if(NOT TARGET AGP3D::AGP3DAPI)
   add_subdirectory(Lume3D)
+  set(3D_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Lume3D")
+endif()
+
+#
+# Extract LumeShaderCompiler.exe from LumeRender
+#
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/LumeShaderCompiler.exe")
+  if(NOT EXISTS "${RENDER_DIR}/tools/LumeShaderCompiler.zip")
+    message(FATAL_ERROR "Please run:\n"
+      "git submodule update --init\n"
+      "and then re-run cmake.")
+  else()
+    # Cmake 3.20+
+    file(ARCHIVE_EXTRACT
+      INPUT "${RENDER_DIR}/tools/LumeShaderCompiler.zip"
+      DESTINATION "${CMAKE_BINARY_DIR}")
+  endif()
 endif()
 
 set_target_properties(AGPEngineDLL PROPERTIES
@@ -96,6 +112,23 @@ target_link_libraries(LumeDemo PRIVATE
   AGPEngine::AGPEngineDLL
   AGPEngine::ComponentHelperSDK
   DemoCommon)
+
+set(shader_compiler_executable "${CMAKE_BINARY_DIR}/LumeShaderCompiler.exe")
+set(argument_list)
+list(APPEND argument_list "--optimize")
+list(APPEND argument_list "--source")
+list(APPEND argument_list "${CMAKE_CURRENT_SOURCE_DIR}/assets/app/shader")
+list(APPEND argument_list "--include")
+list(APPEND argument_list "${RENDER_DIR}/api")
+list(APPEND argument_list "--include")
+list(APPEND argument_list "${3D_DIR}/api")
+list(APPEND argument_list "--vulkan")
+list(APPEND argument_list "1.1")
+list(APPEND argument_list "--check-if-changed")
+add_custom_target(DemoCompileShaders ALL
+  COMMAND ${shader_compiler_executable} ${argument_list}
+  COMMAND_EXPAND_LISTS)
+add_dependencies(LumeDemo DemoCompileShaders)
 
 add_custom_target(CopyAssets ALL
   COMMAND ${CMAKE_COMMAND} -E copy_directory

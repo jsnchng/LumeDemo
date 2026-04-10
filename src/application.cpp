@@ -20,6 +20,7 @@
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>
+#include <render/device/intf_shader_manager.h>
 #include <render/implementation_uids.h>
 #include <render/intf_render_context.h>
 #include <render/intf_renderer.h>
@@ -120,6 +121,13 @@ public:
 
     void OnStart() override
     {
+        {
+            // Redirect 3dshaders://shader/core3d_dm_fw.shader to assets://app/shader/core3d_dm_fw.shader
+            // Must place before ecs initialization.
+            auto& shaderManager = renderContext_->GetDevice().GetShaderManager();
+            shaderManager.LoadShaderFile("assets://app/shader/core3d_dm_fw.shader");
+        }
+
         ecs_->Initialize();
         transformManager_ = GetManager<ITransformComponentManager>(*ecs_);
         cameraManager_ = GetManager<ICameraComponentManager>(*ecs_);

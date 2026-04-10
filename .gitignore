@@ -1,1 +1,6 @@
+*.*.meta
+*.*.spv
+*.*.spv.gl
+*.*.spv.gles
+*.*.spv.lsb
 build/
