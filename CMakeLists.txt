@@ -43,6 +43,13 @@ if(NOT TARGET AGP3D::AGP3DAPI)
 endif()
 
 #
+# Target: LumePTAPI
+#
+if(NOT TARGET LumePT::LumePTAPI)
+  add_subdirectory(LumePluginTemplate)
+endif()
+
+#
 # Extract LumeShaderCompiler.exe from LumeRender
 #
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/LumeShaderCompiler.exe")
@@ -69,6 +76,11 @@ set_target_properties(PluginAGPRender PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins)
 
 set_target_properties(PluginAGP3D PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins
+  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins)
+
+set_target_properties(PluginLumePT PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins
   LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins)
@@ -103,12 +115,14 @@ add_executable(LumeDemo src/application.cpp)
 add_dependencies(LumeDemo
   PluginAGPRender
   PluginAGP3D
+  PluginLumePT
   DemoCommon)
 target_link_libraries(LumeDemo PRIVATE
   AGPBase::AGPBaseAPI
   AGPEngine::AGPEngineAPI
   AGPRender::AGPRenderAPI
   AGP3D::AGP3DAPI
+  LumePT::LumePTAPI
   AGPEngine::AGPEngineDLL
   AGPEngine::ComponentHelperSDK
   DemoCommon)

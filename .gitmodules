@@ -10,3 +10,6 @@
 [submodule "Lume3D"]
 	path = Lume3D
 	url = git@github.com:jsnchng/Lume3D.git
+[submodule "LumePluginTemplate"]
+	path = LumePluginTemplate
+	url = git@github.com:jsnchng/LumePluginTemplate.git

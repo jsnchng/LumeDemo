@@ -47,6 +47,8 @@
 #include <3d/util/intf_picking.h>
 #include <3d/util/intf_scene_util.h>
 
+#include <plugintemplate/implementation_uids.h>
+
 #include "application_config.h"
 #include "application_factory.h"
 #include "application_interface.h"
@@ -55,6 +57,7 @@ using namespace BASE_NS;
 using namespace CORE_NS;
 using namespace RENDER_NS;
 using namespace CORE3D_NS;
+using namespace PT_NS;
 
 class MinimalDemo : public IApplication {
 public:
@@ -96,6 +99,10 @@ public:
         GetPluginRegister().LoadPlugins(uid3D);
         graphicsContext_ = CreateInstance<IGraphicsContext>(*renderContext_->GetInterface<IClassFactory>(), UID_GRAPHICS_CONTEXT);
         graphicsContext_->Init();
+
+        // PluginTemplate
+        constexpr Uid uidPT[] = { UID_PT_PLUGIN };
+        GetPluginRegister().LoadPlugins(uidPT);
 
         return device;
     }

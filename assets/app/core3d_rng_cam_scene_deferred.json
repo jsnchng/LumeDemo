@@ -115,7 +115,7 @@
             }
         },
         {
-            "typeName": "RenderNodeDefaultMaterialDeferredShading",
+            "typeName": "RenderNodeMyDeferredShading",
             "nodeName": "CORE3D_RN_CAM_DM_DS_DF",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
