@@ -56,6 +56,13 @@
                     "usageFlags": "color_attachment | input_attachment | transient_attachment",
                     "memoryPropertyFlags": "device_local | lazily_allocated",
                     "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "uv",
+                    "format": "r16g16_sfloat",
+                    "usageFlags": "color_attachment | input_attachment | sampled | storage",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
                 }
             ]
         },
@@ -104,13 +111,18 @@
                     {
                         "loadOp": "dont_care",
                         "name": "material"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [0.0, 0.0, 0.0, 0.0],
+                        "name": "uv"
                     }
                 ],
                 "subpassIndex": 0,
                 "subpassCount": 2,
                 "subpass": {
                     "depthAttachmentIndex": 0,
-                    "colorAttachmentIndices": [ 1, 2, 3, 4 ]
+                    "colorAttachmentIndices": [ 1, 2, 3, 4, 5 ]
                 }
             }
         },
