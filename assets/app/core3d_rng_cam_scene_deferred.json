@@ -127,7 +127,7 @@
             }
         },
         {
-            "typeName": "RenderNodeMyDeferredShading",
+            "typeName": "RenderNodeDefaultMaterialDeferredShading",
             "nodeName": "CORE3D_RN_CAM_DM_DS_DF",
             "renderDataStore": {
                 "dataStoreName": "RenderDataStorePod",
@@ -165,6 +165,153 @@
                     "inputAttachmentIndices": [ 0, 2, 3, 4 ]
                 }
             }
+        },
+        {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "lr_texture",
+                    "format": "r8g8b8a8_srgb",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "sampled | storage",
+                    "memoryPropertyFlags": "device_local"
+                },
+                {
+                    "name": "lr_gradient",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local"
+                },
+                {
+                    "name": "lr_momentum1",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local"
+                },
+                {
+                    "name": "lr_momentum2",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local"
+                },
+                {
+                    "name": "loss_output",
+                    "format": "r32_sfloat",
+                    "width": 1024,
+                    "height": 1024,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local"
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeSRTraining",
+            "nodeName": "SR_TRAINING",
+            "queue": {
+                "type": "compute",
+                "index": 0
+            },
+            "resources": [
+                {
+                    "type": "texture",
+                    "name": "depthBuffer",
+                    "binding": 0,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "CORE3D_RN_CAM_CTRL",
+                    "usageName": "depth"
+                },
+                {
+                    "type": "texture",
+                    "name": "normalBuffer",
+                    "binding": 1,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "CORE3D_RN_CAM_CTRL",
+                    "usageName": "velocity_normal"
+                },
+                {
+                    "type": "texture",
+                    "name": "materialBuffer",
+                    "binding": 2,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "CORE3D_RN_CAM_CTRL",
+                    "usageName": "material"
+                },
+                {
+                    "type": "texture",
+                    "name": "uvBuffer",
+                    "binding": 3,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "CORE3D_RN_CAM_CTRL",
+                    "usageName": "uv"
+                },
+                {
+                    "type": "texture",
+                    "name": "baseColorBuffer",
+                    "binding": 4,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "CORE3D_RN_CAM_CTRL",
+                    "usageName": "base_color"
+                },
+                {
+                    "type": "texture",
+                    "name": "lrTexture",
+                    "binding": 5,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "SR_RESOURCES",
+                    "usageName": "lr_texture"
+                },
+                {
+                    "type": "sampler",
+                    "name": "sampler",
+                    "binding": 6
+                },
+                {
+                    "type": "texture",
+                    "name": "gtImage",
+                    "binding": 9,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "CORE3D_RN_CAM_CTRL",
+                    "usageName": "color"
+                }
+            ],
+            "images": [
+                {
+                    "name": "lrGradient",
+                    "binding": 7,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "SR_RESOURCES",
+                    "usageName": "lr_gradient"
+                },
+                {
+                    "name": "lossOutput",
+                    "binding": 8,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "SR_RESOURCES",
+                    "usageName": "loss_output"
+                },
+                {
+                    "name": "lrMomentum1",
+                    "binding": 10,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "SR_RESOURCES",
+                    "usageName": "lr_momentum1"
+                },
+                {
+                    "name": "lrMomentum2",
+                    "binding": 11,
+                    "resourceLocation": "from_named_render_node_output",
+                    "nodeName": "SR_RESOURCES",
+                    "usageName": "lr_momentum2"
+                }
+            ]
         },
         {
             "typeName": "RenderNodeBackBuffer",
