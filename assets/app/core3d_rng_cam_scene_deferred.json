@@ -151,26 +151,35 @@
             "renderPass": {
                 "attachments": [
                     {
+                        "storeOp": "store",
                         "name": "depth"
                     },
                     {
+                        "storeOp": "store",
                         "name": "color"
                     },
                     {
+                        "storeOp": "store",
                         "name": "velocity_normal"
                     },
                     {
+                        "storeOp": "store",
                         "name": "base_color"
                     },
                     {
+                        "storeOp": "store",
                         "name": "material"
+                    },
+                    {
+                        "storeOp": "store",
+                        "name": "uv"
                     }
                 ],
                 "subpassIndex": 1,
                 "subpassCount": 2,
                 "subpass": {
                     "colorAttachmentIndices": [ 1 ],
-                    "inputAttachmentIndices": [ 0, 2, 3, 4 ]
+                    "inputAttachmentIndices": [ 0, 2, 3, 4, 5 ]
                 }
             }
         },
