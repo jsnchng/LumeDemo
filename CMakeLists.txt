@@ -156,5 +156,8 @@ add_custom_target(CopyAssets ALL
           ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/render
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/Lume3D/assets/3d
-          ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/3d)
+          ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/3d
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CMAKE_SOURCE_DIR}/LumePluginTemplate/assets/pt
+          ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/pt)
 add_dependencies(CopyAssets LumeDemo)
