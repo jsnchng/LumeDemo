@@ -180,8 +180,8 @@
             "gpuImageDescs": [
                 {
                     "name": "lr_texture",
-		    "shareName": "lr_texture",
-                    "format": "r8g8b8a8_srgb",
+                    "shareName": "lr_texture",
+                    "format": "r8g8b8a8_unorm",
                     "width": 512,
                     "height": 512,
                     "usageFlags": "sampled | storage",
