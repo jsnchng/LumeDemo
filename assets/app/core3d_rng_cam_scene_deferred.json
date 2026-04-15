@@ -224,48 +224,36 @@
                     "type": "texture",
                     "name": "depthBuffer",
                     "binding": 0,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "CORE3D_RN_CAM_CTRL",
                     "usageName": "depth"
                 },
                 {
                     "type": "texture",
                     "name": "normalBuffer",
                     "binding": 1,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "CORE3D_RN_CAM_CTRL",
                     "usageName": "velocity_normal"
                 },
                 {
                     "type": "texture",
                     "name": "materialBuffer",
                     "binding": 2,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "CORE3D_RN_CAM_CTRL",
                     "usageName": "material"
                 },
                 {
                     "type": "texture",
                     "name": "uvBuffer",
                     "binding": 3,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "CORE3D_RN_CAM_CTRL",
                     "usageName": "uv"
                 },
                 {
                     "type": "texture",
                     "name": "baseColorBuffer",
                     "binding": 4,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "CORE3D_RN_CAM_CTRL",
                     "usageName": "base_color"
                 },
                 {
                     "type": "texture",
                     "name": "lrTexture",
                     "binding": 5,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "SR_RESOURCES",
                     "usageName": "lr_texture"
                 },
                 {
@@ -277,8 +265,6 @@
                     "type": "texture",
                     "name": "gtImage",
                     "binding": 9,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "CORE3D_RN_CAM_CTRL",
                     "usageName": "color"
                 }
             ],
@@ -286,29 +272,21 @@
                 {
                     "name": "lrGradient",
                     "binding": 7,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "SR_RESOURCES",
                     "usageName": "lr_gradient"
                 },
                 {
                     "name": "lossOutput",
                     "binding": 8,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "SR_RESOURCES",
                     "usageName": "loss_output"
                 },
                 {
                     "name": "lrMomentum1",
                     "binding": 10,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "SR_RESOURCES",
                     "usageName": "lr_momentum1"
                 },
                 {
                     "name": "lrMomentum2",
                     "binding": 11,
-                    "resourceLocation": "from_named_render_node_output",
-                    "nodeName": "SR_RESOURCES",
                     "usageName": "lr_momentum2"
                 }
             ]
