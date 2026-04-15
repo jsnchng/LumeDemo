@@ -113,11 +113,13 @@
                         "name": "velocity_normal"
                     },
                     {
-                        "loadOp": "dont_care",
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
                         "name": "base_color"
                     },
                     {
-                        "loadOp": "dont_care",
+                        "loadOp": "clear",
+                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
                         "name": "material"
                     },
                     {
