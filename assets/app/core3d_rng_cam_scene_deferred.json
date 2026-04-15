@@ -11,12 +11,14 @@
             "gpuImageDescs": [
                 {
                     "name": "output",
+                    "shareName": "output",
                     "format": "b10g11r11_ufloat_pack32",
                     "usageFlags": "color_attachment | input_attachment | sampled",
                     "engineCreationFlags": "dynamic_barriers"
                 },
                 {
                     "name": "depth",
+                    "shareName": "depth",
                     "format": "d32_sfloat",
                     "usageFlags": "depth_stencil_attachment | input_attachment | sampled",
                     "memoryPropertyFlags": "device_local | lazily_allocated",
@@ -24,6 +26,7 @@
                 },
                 {
                     "name": "color",
+                    "shareName": "color",
                     "format": "b10g11r11_ufloat_pack32",
                     "usageFlags": "color_attachment | input_attachment | sampled",
                     "memoryPropertyFlags": "device_local",
@@ -31,6 +34,7 @@
                 },
                 {
                     "name": "velocity_normal",
+                    "shareName": "velocity_normal",
                     "format": "r16g16b16a16_sfloat",
                     "usageFlags": "color_attachment | input_attachment | sampled",
                     "memoryPropertyFlags": "device_local | lazily_allocated",
@@ -38,6 +42,7 @@
                 },
                 {
                     "name": "history",
+                    "shareName": "history",
                     "format": "b10g11r11_ufloat_pack32",
                     "usageFlags": "color_attachment | input_attachment | sampled",
                     "memoryPropertyFlags": "device_local",
@@ -45,6 +50,7 @@
                 },
                 {
                     "name": "base_color",
+                    "shareName": "base_color",
                     "format": "r8g8b8a8_srgb",
                     "usageFlags": "color_attachment | input_attachment | transient_attachment",
                     "memoryPropertyFlags": "device_local | lazily_allocated",
@@ -52,6 +58,7 @@
                 },
                 {
                     "name": "material",
+                    "shareName": "material",
                     "format": "r8g8b8a8_unorm",
                     "usageFlags": "color_attachment | input_attachment | transient_attachment",
                     "memoryPropertyFlags": "device_local | lazily_allocated",
@@ -59,6 +66,7 @@
                 },
                 {
                     "name": "uv",
+                    "shareName": "uv",
                     "format": "r16g16_sfloat",
                     "usageFlags": "color_attachment | input_attachment | sampled | storage",
                     "memoryPropertyFlags": "device_local",
@@ -172,6 +180,7 @@
             "gpuImageDescs": [
                 {
                     "name": "lr_texture",
+		    "shareName": "lr_texture",
                     "format": "r8g8b8a8_srgb",
                     "width": 512,
                     "height": 512,
@@ -180,6 +189,7 @@
                 },
                 {
                     "name": "lr_gradient",
+                    "shareName": "lr_gradient",
                     "format": "r32g32b32a32_sfloat",
                     "width": 512,
                     "height": 512,
@@ -188,6 +198,7 @@
                 },
                 {
                     "name": "lr_momentum1",
+                    "shareName": "lr_momentum1",
                     "format": "r32g32b32a32_sfloat",
                     "width": 512,
                     "height": 512,
@@ -196,6 +207,7 @@
                 },
                 {
                     "name": "lr_momentum2",
+                    "shareName": "lr_momentum2",
                     "format": "r32g32b32a32_sfloat",
                     "width": 512,
                     "height": 512,
@@ -204,6 +216,7 @@
                 },
                 {
                     "name": "loss_output",
+                    "shareName": "loss_output",
                     "format": "r32_sfloat",
                     "width": 1024,
                     "height": 1024,
