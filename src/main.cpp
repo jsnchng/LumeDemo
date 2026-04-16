@@ -13,6 +13,7 @@
 #include <GLFW/glfw3.h>
 
 #include <memory>
+#include <iostream>
 
 #include <core/io/intf_file_manager.h>
 #include <core/log.h>
@@ -34,6 +35,12 @@ namespace {
             return invalidSurfaceHandle;
         }
         const auto& platformData = static_cast<const RENDER_NS::DevicePlatformDataVk&>(device->GetPlatformData());
+        {
+            // maxPushConstantsSize
+            VkPhysicalDeviceProperties props;
+            vkGetPhysicalDeviceProperties(platformData.physicalDevice, &props);
+            std::cout << "maxPushConstantsSize: " << props.limits.maxPushConstantsSize << " bytes" << std::endl;
+        }
         VkSurfaceKHR surface { VK_NULL_HANDLE };
         if (glfwCreateWindowSurface(platformData.instance, windowHandle, nullptr, &surface) != VK_SUCCESS) {
             app->OnStop();
