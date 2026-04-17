@@ -98,8 +98,8 @@ void RegisterAppPaths(CORE_NS::IEngine& engine)
 }
 
 int main() {
-    constexpr int width = 1600;
-    constexpr int height = 900;
+    constexpr int width = 1024;
+    constexpr int height = 1024;
 
     const CORE_NS::PlatformCreateInfo platformCreateInfo{};
     CORE_NS::CreatePluginRegistry(platformCreateInfo);
