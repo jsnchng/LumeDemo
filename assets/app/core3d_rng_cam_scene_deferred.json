@@ -233,6 +233,15 @@
                     "height": 1024,
                     "usageFlags": "storage | sampled",
                     "memoryPropertyFlags": "device_local"
+                },
+                {
+                    "name": "debugOutput",
+                    "shareName": "debugOutput",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 1024,
+                    "height": 1024,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local"
                 }
             ]
         },
