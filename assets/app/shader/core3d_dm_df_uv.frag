@@ -115,7 +115,8 @@ void PbrBasic()
     outUV = vec4(uv, 0.0, 1.0);
     
     // 原有输出
-    outColor = GetPackColor(vec4(emissive, 1.0));
+    // outColor = GetPackColor(vec4(emissive, 1.0));
+    outColor = GetPackColor(vec4(0., 0., 0., 1.0)); // 先不考虑自发光
     const uint cameraIdx = GetUnpackFlatIndicesCameraIdx(inIndices);
     outVelocityNormal = GetPackVelocityAndNormal(
         GetFinalCalculatedVelocity(inPos.xyz, inPrevPosI.xyz, cameraIdx), 
