@@ -129,8 +129,8 @@ public:
     void OnStart() override
     {
         {
+            // Must be placed before ECS initialization so that RNG can access these paths
             // Redirect 3dshaders://shader/core3d_dm_fw.shader to assets://app/shader/core3d_dm_fw.shader
-            // Must place before ecs initialization.
             auto& shaderManager = renderContext_->GetDevice().GetShaderManager();
             shaderManager.LoadShaderFile("assets://app/shader/core3d_dm_fw.shader");
         }
@@ -140,8 +140,6 @@ public:
         cameraManager_ = GetManager<ICameraComponentManager>(*ecs_);
         // .rng indicates that it is the same as the original file in 3d/rendernodegraphs
         sceneRng_ = CreateRenderNodeGraph("assets://app/core3d_rng_scene.rng");
-        // .json means the file has been changed from that in 3d/rendernodegraphs
-        cameraSceneLwrpRNG_ = CreateRenderNodeGraph("assets://app/core3d_rng_cam_scene_lwrp.json");
         // .json means the file has been changed from that in 3d/rendernodegraphs
         cameraSceneDeferredRNG_ = CreateRenderNodeGraph("assets://app/core3d_rng_cam_scene_deferred.json");
         {
@@ -186,12 +184,7 @@ public:
         if (needRender) {
             IRenderer& renderer = renderContext_->GetRenderer();
             vector<RenderHandleReference> rngs{ sceneRng_ };
-#define DEFERRED
-#if defined(DEFERRED)
             rngs.emplace_back(cameraSceneDeferredRNG_);
-#else
-            rngs.emplace_back(cameraSceneLwrpRNG_);
-#endif
             renderer.RenderFrame(rngs);
         }
     }
@@ -231,7 +224,6 @@ private:
     IRenderContext::Ptr renderContext_;
     IGraphicsContext::Ptr graphicsContext_;
     RenderHandleReference sceneRng_;
-    RenderHandleReference cameraSceneLwrpRNG_;
     RenderHandleReference cameraSceneDeferredRNG_;
     uint32_t windowWidth_;
     uint32_t windowHeight_;
