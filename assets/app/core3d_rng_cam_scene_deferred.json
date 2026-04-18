@@ -342,7 +342,7 @@
                 "type": "graphics",
                 "index": 0
             },
-            "shader": "rendershaders://shader/fullscreen_copy.shader",
+            "shader": "assets://app/shader/split_screen_display.shader",
             "renderPass": {
                 "attachments": [
                     {
@@ -360,7 +360,22 @@
                     {
                         "set": 0,
                         "binding": 1,
+                        "name": "debugOutput"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 2,
                         "name": "color"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 3,
+                        "name": "lr_texture"
+                    },
+                    {
+                        "set": 0,
+                        "binding": 4,
+                        "name": "lr_gradient"
                     }
                 ],
                 "samplers": [

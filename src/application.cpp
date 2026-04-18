@@ -135,6 +135,9 @@ public:
             shaderManager.LoadShaderFile("assets://app/shader/core3d_dm_fw.shader");
             // Redirect 3dshaders://shader/core3d_dm_fullscreen_deferred_shading.shader to assets://app/shader/core3d_dm_fullscreen_deferred_shading.shader
             shaderManager.LoadShaderFile("assets://app/shader/core3d_dm_fullscreen_deferred_shading.shader");
+
+            // LumeDemo 4-panel atlas display shader for SR Training visualization
+            shaderManager.LoadShaderFile("assets://app/shader/split_screen_display.shader");
         }
 
         ecs_->Initialize();
