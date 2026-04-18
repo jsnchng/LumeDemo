@@ -1,15 +1,15 @@
 [submodule "LumeBase"]
 	path = LumeBase
-	url = git@github.com:jsnchng/LumeBase.git
+	url = https://github.com/jsnchng/LumeBase.git
 [submodule "LumeEngine"]
 	path = LumeEngine
-	url = git@github.com:jsnchng/LumeEngine.git
+	url = https://github.com/jsnchng/LumeEngine.git
 [submodule "LumeRender"]
 	path = LumeRender
-	url = git@github.com:jsnchng/LumeRender.git
+	url = https://github.com/jsnchng/LumeRender.git
 [submodule "Lume3D"]
 	path = Lume3D
-	url = git@github.com:jsnchng/Lume3D.git
+	url = https://github.com/jsnchng/Lume3D.git
 [submodule "LumePluginTemplate"]
 	path = LumePluginTemplate
-	url = git@github.com:jsnchng/LumePluginTemplate.git
+	url = https://github.com/jsnchng/LumePluginTemplate.git
