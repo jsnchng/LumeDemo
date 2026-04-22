@@ -75,6 +75,80 @@
             ]
         },
         {
+            "typeName": "RenderNodeCreateGpuImages",
+            "nodeName": "RenderNodeCreateGpuImages",
+            "gpuImageDescs": [
+                {
+                    "name": "lr_texture",
+                    "shareName": "lr_texture",
+                    "format": "r8g8b8a8_unorm",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "sampled | storage",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "lr_gradient",
+                    "shareName": "lr_gradient",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "lr_momentum1",
+                    "shareName": "lr_momentum1",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "lr_momentum2",
+                    "shareName": "lr_momentum2",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 512,
+                    "height": 512,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "loss_output",
+                    "shareName": "loss_output",
+                    "format": "r32_sfloat",
+                    "width": 1024,
+                    "height": 1024,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "debugOutput",
+                    "shareName": "debugOutput",
+                    "format": "r32g32b32a32_sfloat",
+                    "width": 1024,
+                    "height": 1024,
+                    "usageFlags": "storage | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
+                }
+            ]
+        },
+        {
+            "typeName": "RenderNodeSRDownsampleInit",
+            "nodeName": "SR_DOWNSAMPLE_INIT",
+            "queue": {
+                "type": "graphics",
+                "index": 0
+            }
+        },
+        {
             "typeName": "RenderNodeDefaultCameraController",
             "nodeName": "RenderNodeDefaultCameraController"
         },
@@ -184,72 +258,6 @@
                     "inputAttachmentIndices": [ 0, 2, 3, 4, 5 ]
                 }
             }
-        },
-        {
-            "typeName": "RenderNodeCreateGpuImages",
-            "nodeName": "RenderNodeCreateGpuImages",
-            "gpuImageDescs": [
-                {
-                    "name": "lr_texture",
-                    "shareName": "lr_texture",
-                    "format": "r8g8b8a8_unorm",
-                    "width": 512,
-                    "height": 512,
-                    "usageFlags": "sampled | storage",
-                    "memoryPropertyFlags": "device_local",
-                    "engineCreationFlags": "dynamic_barriers"
-                },
-                {
-                    "name": "lr_gradient",
-                    "shareName": "lr_gradient",
-                    "format": "r32g32b32a32_sfloat",
-                    "width": 512,
-                    "height": 512,
-                    "usageFlags": "storage | sampled",
-                    "memoryPropertyFlags": "device_local",
-                    "engineCreationFlags": "dynamic_barriers"
-                },
-                {
-                    "name": "lr_momentum1",
-                    "shareName": "lr_momentum1",
-                    "format": "r32g32b32a32_sfloat",
-                    "width": 512,
-                    "height": 512,
-                    "usageFlags": "storage | sampled",
-                    "memoryPropertyFlags": "device_local",
-                    "engineCreationFlags": "dynamic_barriers"
-                },
-                {
-                    "name": "lr_momentum2",
-                    "shareName": "lr_momentum2",
-                    "format": "r32g32b32a32_sfloat",
-                    "width": 512,
-                    "height": 512,
-                    "usageFlags": "storage | sampled",
-                    "memoryPropertyFlags": "device_local",
-                    "engineCreationFlags": "dynamic_barriers"
-                },
-                {
-                    "name": "loss_output",
-                    "shareName": "loss_output",
-                    "format": "r32_sfloat",
-                    "width": 1024,
-                    "height": 1024,
-                    "usageFlags": "storage | sampled",
-                    "memoryPropertyFlags": "device_local",
-                    "engineCreationFlags": "dynamic_barriers"
-                },
-                {
-                    "name": "debugOutput",
-                    "shareName": "debugOutput",
-                    "format": "r32g32b32a32_sfloat",
-                    "width": 1024,
-                    "height": 1024,
-                    "usageFlags": "storage | sampled",
-                    "memoryPropertyFlags": "device_local",
-                    "engineCreationFlags": "dynamic_barriers"
-                }
-            ]
         },
         {
             "typeName": "RenderNodeSRTraining",
