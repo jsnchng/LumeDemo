@@ -7,7 +7,7 @@
     "displayName": "Fullscreen Deferred Shading",
     "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
     "frag": "assets://app/shader/core3d_dm_fullscreen_deferred_shading_unlit.frag.spv",
-    "pipelineLayout": "3dpipelinelayouts://core3d_dm_fullscreen_deferred_shading.shaderpl",
+    "pipelineLayout": "assets://app/shader/core3d_dm_fullscreen_deferred_shading.shaderpl",
     "state": {
         "rasterizationState": {
             "enableDepthClamp": false,
