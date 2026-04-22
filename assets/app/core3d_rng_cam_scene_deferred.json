@@ -257,6 +257,22 @@
                     "colorAttachmentIndices": [ 1 ],
                     "inputAttachmentIndices": [ 0, 2, 3, 4, 5 ]
                 }
+            },
+            "resources": {
+                "images": [
+                    {
+                        "set": 2,
+                        "binding": 0,
+                        "name": "lr_texture"
+                    }
+                ],
+                "samplers": [
+                    {
+                        "set": 2,
+                        "binding": 1,
+                        "name": "CORE_DEFAULT_SAMPLER_LINEAR_CLAMP"
+                    }
+                ]
             }
         },
         {

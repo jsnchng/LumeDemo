@@ -133,6 +133,9 @@ public:
             // Redirect 3dshaders://shader/core3d_dm_fw.shader to assets://app/shader/core3d_dm_fw.shader
             auto& shaderManager = renderContext_->GetDevice().GetShaderManager();
             shaderManager.LoadShaderFile("assets://app/shader/core3d_dm_fw.shader");
+
+            // Used by .shader files. Must be loaded first.
+            shaderManager.LoadShaderFile("assets://app/shader/core3d_dm_fullscreen_deferred_shading.shaderpl");
             // Redirect 3dshaders://shader/core3d_dm_fullscreen_deferred_shading.shader to assets://app/shader/core3d_dm_fullscreen_deferred_shading.shader
             shaderManager.LoadShaderFile("assets://app/shader/core3d_dm_fullscreen_deferred_shading.shader");
 

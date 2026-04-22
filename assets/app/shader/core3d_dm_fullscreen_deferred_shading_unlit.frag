@@ -24,6 +24,9 @@ layout(location = 0) in vec2 inUv;
 
 layout(location = 0) out vec4 outColor;
 
+layout(set = 2, binding = 0) uniform texture2D uTexture;
+layout(set = 2, binding = 1) uniform sampler uSampler;
+
 // unpack gbuffer
 
 struct FullGBufferData {
@@ -311,6 +314,8 @@ void main(void)
         FullGBufferData fd = GetUnpackMaterialValues(inUv);
 
         outColor = UnlitBasic();
+            vec4 test = textureLod(sampler2D(uTexture, uSampler), inUv.xy, 0);
+            outColor += test;
 
     } else {
         outColor = vec4(0.0);
