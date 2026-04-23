@@ -6,7 +6,7 @@
     "category":"3D",
     "displayName": "Fullscreen Deferred Shading",
     "vert": "rendershaders://shader/fullscreen_triangle.vert.spv",
-    "frag": "assets://app/shader/core3d_dm_fullscreen_deferred_shading_unlit.frag.spv",
+    "frag": "assets://app/shader/core3d_dm_fullscreen_deferred_shading.frag.spv",
     "pipelineLayout": "assets://app/shader/core3d_dm_fullscreen_deferred_shading.shaderpl",
     "state": {
         "rasterizationState": {

@@ -24,9 +24,6 @@ layout(location = 0) in vec2 inUv;
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 2, binding = 0) uniform texture2D uTexture;
-layout(set = 2, binding = 1) uniform sampler uSampler;
-
 // unpack gbuffer
 
 struct FullGBufferData {
@@ -310,13 +307,15 @@ fragment shader for basic pbr materials.
 void main(void)
 {
     const float depthBufferSample = GetSampledDepthBuffer(inUv);
-    if (depthBufferSample <= 1.0) {
+    if (depthBufferSample < 1.0) {
         FullGBufferData fd = GetUnpackMaterialValues(inUv);
-
-        outColor = UnlitBasic();
-            vec4 test = textureLod(sampler2D(uTexture, uSampler), inUv.xy, 0);
-            outColor += test;
-
+        if (fd.materialType == CORE_MATERIAL_UNLIT) {
+            outColor = UnlitBasic();
+        } else if (fd.materialType == CORE_MATERIAL_UNLIT_SHADOW_ALPHA) {
+            outColor = UnlitShadowAlpha(depthBufferSample, fd);
+        } else {
+            outColor = PbrBasic(depthBufferSample, fd);
+        }
     } else {
         outColor = vec4(0.0);
     }
