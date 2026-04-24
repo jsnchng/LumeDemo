@@ -29,7 +29,8 @@
                 { "binding" : 0, "descriptorType" : "input_attachment", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" },
                 { "binding" : 1, "descriptorType" : "input_attachment", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" },
                 { "binding" : 2, "descriptorType" : "input_attachment", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" },
-                { "binding" : 3, "descriptorType" : "input_attachment", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" }
+                { "binding" : 3, "descriptorType" : "input_attachment", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" },
+                { "binding" : 4, "descriptorType" : "input_attachment", "descriptorCount": 1, "shaderStageFlags" : "fragment_bit" }
             ]
         },
         {

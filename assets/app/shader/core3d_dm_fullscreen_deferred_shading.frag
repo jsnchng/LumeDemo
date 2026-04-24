@@ -24,6 +24,15 @@ layout(location = 0) in vec2 inUv;
 
 layout(location = 0) out vec4 outColor;
 
+// for differentiable rendering
+// color output: location=1 maps to colorAttachmentIndices[1] in .rng/.json
+layout(location = 1) out vec4 predictedColor;
+// input attachment: set=1 and binding=4 are defined in .shaderpl, binding=4 maps to inputAttachmentIndices[4] in .rng/.json
+layout(input_attachment_index = 0, set = 1, binding = 4) uniform subpassInput uGBufferUv;
+// resources: set=1 and binding=0/1 are both defined in .shaderpl, added via resources in .rng/.json
+layout(set = 2, binding = 0) uniform texture2D uLRTexture;
+layout(set = 2, binding = 1) uniform sampler uLRSamplerRepeat;
+
 // unpack gbuffer
 
 struct FullGBufferData {
@@ -301,6 +310,64 @@ vec4 PbrBasic(float depthBufferSample, FullGBufferData fd)
     return vec4(color.rgb, 1.0);
 }
 
+vec4 PbrBasicWithLRBaseColor(float depthBufferSample, FullGBufferData fd)
+{
+    GetSampledGBuffer(inUv, fd);
+
+    // Sample base color from low resolution texture using uv stored in G-Buffer, replacing base color from G-Buffer
+    vec4 GBufferUv = subpassLoad(uGBufferUv);
+    CORE_RELAXEDP vec4 LRBaseColor = textureLod(sampler2D(uLRTexture, uLRSamplerRepeat), GBufferUv.xy, 0);
+    // should always be metallic roughness
+    InputBrdfData brdfData = CalcBRDFMetallicRoughness(LRBaseColor, fd.material);
+
+    const uint cameraIdx = GetUnpackCameraIndex(uGeneralData);
+    const vec3 worldPos = GetWorldPos(cameraIdx, depthBufferSample, inUv.xy);
+    const vec3 camWorldPos = uCameras[cameraIdx].viewInv[3].xyz;
+
+    const vec3 V = normalize(camWorldPos - worldPos);
+    const float NoV = clamp(dot(fd.normal, V), CORE3D_PBR_LIGHTING_EPSILON, 1.0);
+
+    ShadingData shadingData;
+    shadingData.pos = worldPos;
+    shadingData.N = fd.normal;
+    shadingData.NoV = NoV;
+    shadingData.V = V;
+    shadingData.f0 = brdfData.f0;
+    shadingData.alpha2 = brdfData.alpha2;
+    shadingData.diffuseColor = brdfData.diffuseColor;
+    CORE_RELAXEDP const float roughness = brdfData.roughness;
+
+    vec3 color = vec3(0.0); // brdfData.diffuseColor
+    if ((fd.materialFlags & CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) == CORE_MATERIAL_PUNCTUAL_LIGHT_RECEIVER_BIT) {
+        color = CalculateLighting(shadingData, fd.materialFlags);
+    }
+
+    if ((fd.materialFlags & CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) == CORE_MATERIAL_INDIRECT_LIGHT_RECEIVER_BIT) {
+        // lambert baked into irradianceSample (SH)
+        CORE_RELAXEDP vec3 irradiance = CoreGetIrradianceSample(shadingData.N) * shadingData.diffuseColor * fd.ao;
+
+        const vec3 worldReflect = reflect(-shadingData.V, shadingData.N);
+        const CORE_RELAXEDP vec3 fIndirect = EnvBRDFApprox(shadingData.f0.xyz, roughness, NoV);
+        // ao applied after clear coat
+        CORE_RELAXEDP vec3 radianceSample = CoreGetRadianceSample(worldReflect, roughness);
+        CORE_RELAXEDP vec3 radiance = radianceSample * fIndirect;
+        // apply ao for indirect specular as well (cheap version)
+#if 1
+        radiance *= fd.ao * SpecularHorizonOcclusion(worldReflect, fd.normal);
+#else
+        radiance *= EnvSpecularAo(fd.ao, NoV, roughness) * SpecularHorizonOcclusion(worldReflect, normNormal);
+#endif
+
+        color += (irradiance + radiance);
+    }
+
+    // fog handling
+    InplaceFogBlock(CORE_CAMERA_FLAGS, worldPos.xyz, camWorldPos.xyz, vec4(color, 1.0), color);
+
+    color.rgb = clamp(color.rgb, 0.0, CORE_HDR_FLOAT_CLAMP_MAX_VALUE); // zero to hdr max
+    return vec4(color.rgb, 1.0);
+}
+
 /*
 fragment shader for basic pbr materials.
 */
@@ -315,8 +382,10 @@ void main(void)
             outColor = UnlitShadowAlpha(depthBufferSample, fd);
         } else {
             outColor = PbrBasic(depthBufferSample, fd);
+            predictedColor = PbrBasicWithLRBaseColor(depthBufferSample, fd);
         }
     } else {
         outColor = vec4(0.0);
+        predictedColor = vec4(0.0);
     }
 }
