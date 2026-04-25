@@ -150,6 +150,17 @@
                     "usageFlags": "color_attachment | storage | sampled",
                     "memoryPropertyFlags": "device_local",
                     "engineCreationFlags": "dynamic_barriers"
+                },
+                {
+                    "name": "testColor",
+                    "shareName": "testColor",
+                    "format": "b10g11r11_ufloat_pack32",
+                    "dependencyImageName": "depth",
+                    "dependencyFlags": "size",
+                    "dependencySizeScale": 1,
+                    "usageFlags": "color_attachment | storage | sampled",
+                    "memoryPropertyFlags": "device_local",
+                    "engineCreationFlags": "dynamic_barriers"
                 }
             ]
         },
@@ -186,45 +197,91 @@
                 "attachments": [
                     {
                         "loadOp": "clear",
-                        "clearDepth": [ 1.0, 0 ],
+                        "clearDepth": [
+                            1.0,
+                            0
+                        ],
                         "storeOp": "store",
                         "name": "depth"
                     },
                     {
                         "loadOp": "clear",
-                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "clearColor": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
                         "storeOp": "store",
                         "name": "color"
                     },
                     {
                         "loadOp": "clear",
-                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "clearColor": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
                         "storeOp": "store",
                         "name": "velocity_normal"
                     },
                     {
                         "loadOp": "clear",
-                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "clearColor": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
                         "storeOp": "store",
                         "name": "base_color"
                     },
                     {
                         "loadOp": "clear",
-                        "clearColor": [ 0.0, 0.0, 0.0, 0.0 ],
+                        "clearColor": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
                         "storeOp": "store",
                         "name": "material"
                     },
                     {
                         "loadOp": "clear",
-                        "clearColor": [0.0, 0.0, 0.0, 0.0],
+                        "clearColor": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
                         "storeOp": "store",
                         "name": "uv"
                     },
                     {
                         "loadOp": "clear",
-                        "clearColor": [0.0, 0.0, 0.0, 0.0],
+                        "clearColor": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
                         "storeOp": "store",
                         "name": "predicted_base_color",
+                        "resourceLocation": "from_named_render_node_output",
+                        "nodeName": "RenderNodeCreateGpuImages"
+                    },
+                    {
+                        "loadOp": "clear",
+                        "clearColor": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "storeOp": "store",
+                        "name": "testColor",
                         "resourceLocation": "from_named_render_node_output",
                         "nodeName": "RenderNodeCreateGpuImages"
                     }
@@ -233,7 +290,13 @@
                 "subpassCount": 2,
                 "subpass": {
                     "depthAttachmentIndex": 0,
-                    "colorAttachmentIndices": [ 1, 2, 3, 4, 5 ]
+                    "colorAttachmentIndices": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ]
                 }
             }
         },
@@ -255,32 +318,53 @@
                 "_comment": "attachments must match the first subpass: same names, count, and order",
                 "attachments": [
                     {
-                        "name": "depth"
+                        "name": "depth",
+                        "storeOp": "store"
                     },
                     {
-                        "name": "color"
+                        "name": "color",
+                        "storeOp": "store"
                     },
                     {
-                        "name": "velocity_normal"
+                        "name": "velocity_normal",
+                        "storeOp": "store"
                     },
                     {
-                        "name": "base_color"
+                        "name": "base_color",
+                        "storeOp": "store"
                     },
                     {
-                        "name": "material"
+                        "name": "material",
+                        "storeOp": "store"
                     },
                     {
-                        "name": "uv"
+                        "name": "uv",
+                        "storeOp": "store"
                     },
                     {
-                        "name": "predicted_base_color"
+                        "name": "predicted_base_color",
+                        "storeOp": "store"
+                    },
+                    {
+                        "name": "testColor",
+                        "storeOp": "store"
                     }
                 ],
                 "subpassIndex": 1,
                 "subpassCount": 2,
                 "subpass": {
-                    "colorAttachmentIndices": [ 1, 6 ],
-                    "inputAttachmentIndices": [ 0, 2, 3, 4, 5 ]
+                    "colorAttachmentIndices": [
+                        1,
+                        6,
+                        7
+                    ],
+                    "inputAttachmentIndices": [
+                        0,
+                        2,
+                        3,
+                        4,
+                        5
+                    ]
                 }
             },
             "resources": {
