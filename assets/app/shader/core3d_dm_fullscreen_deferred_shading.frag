@@ -318,8 +318,9 @@ vec4 PbrBasicWithLRBaseColor(float depthBufferSample, FullGBufferData fd)
     // Sample base color from low resolution texture using uv stored in G-Buffer, replacing base color from G-Buffer
     vec4 GBufferUv = subpassLoad(uGBufferUv);
     CORE_RELAXEDP vec4 LRBaseColor = textureLod(sampler2D(uLRTexture, uLRSamplerRepeat), GBufferUv.xy, 0);
+    vec4 baseColor = vec4(LRBaseColor.rgb, fd.baseColor.a);  // channel a is from AO not albedo
     // should always be metallic roughness
-    InputBrdfData brdfData = CalcBRDFMetallicRoughness(LRBaseColor, fd.material);
+    InputBrdfData brdfData = CalcBRDFMetallicRoughness(baseColor, fd.material);
 
     const uint cameraIdx = GetUnpackCameraIndex(uGeneralData);
     const vec3 worldPos = GetWorldPos(cameraIdx, depthBufferSample, inUv.xy);

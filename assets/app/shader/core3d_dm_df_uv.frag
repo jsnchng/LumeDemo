@@ -24,6 +24,7 @@ layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outVelocityNormal;
 layout(location = 2) out vec4 outBaseColor;
 layout(location = 3) out vec4 outMaterial;
+layout(location = 4) out vec4 outUv;
 
 uint GetInstanceIndex()
 {
@@ -131,11 +132,13 @@ void PbrBasic()
     emissive = emissive * baseColor.a; // needs to be multiplied with alpha (premultiplied)
 
     // write out only values which are needed
-    outColor = GetPackColor(vec4(emissive, 1.0));
+    // For simplicity, emissive is not considered for now.
+    // outColor = GetPackColor(vec4(emissive, 1.0));
     const uint cameraIdx = GetUnpackFlatIndicesCameraIdx(inIndices);
     outVelocityNormal = GetPackVelocityAndNormal(GetFinalCalculatedVelocity(inPos.xyz, inPrevPosI.xyz, cameraIdx), N);
     outBaseColor = GetPackBaseColorWithAo(baseColor.xyz, ao);
     outMaterial = GetPackMaterialWithFlags(material, CORE_MATERIAL_TYPE, CORE_MATERIAL_FLAGS);
+    outUv = vec4(inUv.xy, 0.0, 1.0);
 }
 
 /*
