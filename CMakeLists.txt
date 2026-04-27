@@ -127,27 +127,7 @@ target_link_libraries(LumeDemo PRIVATE
   AGPEngine::ComponentHelperSDK
   DemoCommon)
 
-set(shader_compiler_executable "${CMAKE_BINARY_DIR}/LumeShaderCompiler.exe")
-set(argument_list)
-list(APPEND argument_list "--optimize")
-list(APPEND argument_list "--source")
-list(APPEND argument_list "${CMAKE_CURRENT_SOURCE_DIR}/assets/app/shader")
-list(APPEND argument_list "--include")
-list(APPEND argument_list "${RENDER_DIR}/api")
-list(APPEND argument_list "--include")
-list(APPEND argument_list "${3D_DIR}/api")
-list(APPEND argument_list "--vulkan")
-list(APPEND argument_list "1.1")
-list(APPEND argument_list "--check-if-changed")
-add_custom_target(DemoCompileShaders ALL
-  COMMAND ${shader_compiler_executable} ${argument_list}
-  COMMAND_EXPAND_LISTS)
-add_dependencies(LumeDemo DemoCompileShaders)
-
 add_custom_target(CopyAssets ALL
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-          ${CMAKE_SOURCE_DIR}/assets/app
-          ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/app
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_SOURCE_DIR}/assets/glTF
           ${CMAKE_BINARY_DIR}/$<CONFIG>/app/assets/glTF
