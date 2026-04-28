@@ -8,6 +8,9 @@
 #include <base/math/vector_util.h>
 #include <core/ecs/intf_entity_manager.h>
 #include <core/ecs/intf_system_graph_loader.h>
+#include <random>
+#include <base/math/matrix_util.h>
+
 #include <core/engine_info.h>
 #include <core/image/intf_image_loader_manager.h>
 #include <core/implementation_uids.h>
@@ -171,7 +174,45 @@ public:
 
     void OnFrame() override
     {
+        if (frameCount_ % 300 == 0) {
+            static std::mt19937 gen(std::random_device{}());
+            std::uniform_real_distribution<float> disZ(-1.0f, 1.0f);
+            std::uniform_real_distribution<float> disTheta(0.0f, 2.0f * Math::PI);
+
+            // 在半径为 3.0 的球面上生成随机点
+            float r = 3.0f;
+            float z = disZ(gen);
+            float phi = acos(z);
+            float theta = disTheta(gen);
+
+            Math::Vec3 pos(r * sin(phi) * cos(theta), r * sin(phi) * sin(theta), r * cos(phi));
+
+            // 计算看向原点的 View 矩阵
+            // 使用 (0, 1, 0) 作为 Up 向量，简单处理极点情况
+            Math::Vec3 up = (abs(z) > 0.99f) ? Math::Vec3(1.f, 0.f, 0.f) : Math::Vec3(0.f, 1.f, 0.f);
+            Math::Mat4X4 view = Math::LookAtRh(pos, { 0.f, 0.f, 0.f }, up);
+            
+            // 将 View 矩阵转为 World 矩阵
+            Math::Mat4X4 world = Math::Inverse(view);
+
+            // 分解矩阵获取 position 和 orientation
+            Math::Vec3 s, t, sk;
+            Math::Quat q;
+            Math::Vec4 p;
+            Math::Decompose(world, s, q, t, sk, p);
+
+            if (transformManager_) {
+                auto handle = transformManager_->Write(cameraEntity_);
+                if (handle) {
+                    handle->position = t;
+                    handle->rotation = q;
+                }
+            }
+        }
+        frameCount_++;
+
         UpdateCamera();
+
         auto* ecs = ecs_.get();
         const bool needRender = engine_->TickFrame(array_view(&ecs, 1));
         if (needRender) {
@@ -230,6 +271,7 @@ private:
     ICameraComponentManager* cameraManager_;
     vector<ResourceData> importedResources_;
     bool updateCamera_ = true;
+    uint32_t frameCount_ = 0;
 };
 
 IApplication* createApplication()
