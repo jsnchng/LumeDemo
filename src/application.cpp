@@ -50,6 +50,7 @@
 #include <3d/util/intf_scene_util.h>
 
 #include <plugintemplate/implementation_uids.h>
+#include <plugintemplate/camera_control_system.h>
 
 #include "application_config.h"
 #include "application_factory.h"
@@ -180,6 +181,10 @@ public:
 
         auto* ecs = ecs_.get();
         const bool needRender = engine_->TickFrame(array_view(&ecs, 1));
+        
+        // Check if camera view switched and notify render nodes
+        CheckViewSwitchAndNotify();
+        
         if (needRender) {
             IRenderer& renderer = renderContext_->GetRenderer();
             vector<RenderHandleReference> rngs{ sceneRng_ };
@@ -216,6 +221,43 @@ private:
             sceneUtil.UpdateCameraViewport(*ecs_, activeCamera_, { windowWidth_, windowHeight_ }, false, 60.f, 1.f);
         }
     }
+    
+    void CheckViewSwitchAndNotify()
+    {
+        auto* cameraControlSystem = GetSystem<CameraControlSystem>(*ecs_);
+        if (cameraControlSystem) {
+            // Check if view switch was detected in PREVIOUS frame
+            // We delay the Pod flag creation by one frame so that:
+            // - Frame N: Camera position updates, new GT image is rendered
+            // - Frame N+1: Pod flag is set, buffers are cleared, training starts fresh
+            if (pendingViewSwitchClear_) {
+                auto& renderDataStoreMgr = renderContext_->GetRenderDataStoreManager();
+                auto dataStorePtr = renderDataStoreMgr.GetRenderDataStore("RenderDataStorePod");
+                auto* dataStorePod = static_cast<IRenderDataStorePod*>(dataStorePtr.get());
+                
+                if (dataStorePod) {
+                    // Create a flag struct to pass to render nodes
+                    struct ViewSwitchFlag {
+                        uint32_t shouldClearBuffers = 1;
+                    };
+                    ViewSwitchFlag flag;
+                    flag.shouldClearBuffers = 1;
+                    
+                    // Set the flag in the Pod data store
+                    dataStorePod->CreatePod("SRTraining", "ViewSwitchFlag",
+                        array_view<const uint8_t>(reinterpret_cast<const uint8_t*>(&flag), sizeof(flag)));
+                    
+                    pendingViewSwitchClear_ = false;
+                }
+            }
+            
+            // Check if view switched THIS frame - set pending flag for NEXT frame
+            if (cameraControlSystem->HasViewSwitched()) {
+                pendingViewSwitchClear_ = true;
+                cameraControlSystem->ClearViewSwitchedFlag();
+            }
+        }
+    }
 
 private:
     IEngine::Ptr engine_;
@@ -236,6 +278,7 @@ private:
     ICameraComponentManager* cameraManager_;
     vector<ResourceData> importedResources_;
     bool updateCamera_ = true;
+    bool pendingViewSwitchClear_ = false;  // Delayed flag for buffer clearing
 };
 
 IApplication* createApplication()
