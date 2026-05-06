@@ -1,5 +1,11 @@
 #include <algorithm>
 #include <cinttypes>
+#include <fstream>
+#include <iostream>
+#include <vector>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 #include <base/math/mathf.h>
 #include <base/math/quaternion.h>
@@ -19,6 +25,7 @@
 #include <core/plugin/intf_plugin.h>
 #include <core/plugin/intf_plugin_register.h>
 #include <render/datastore/intf_render_data_store_manager.h>
+#include <render/datastore/intf_render_data_store_default_staging.h>
 #include <render/datastore/intf_render_data_store_pod.h>
 #include <render/device/intf_device.h>
 #include <render/device/intf_gpu_resource_manager.h>
@@ -173,7 +180,10 @@ public:
         }
     }
 
-    void OnStop() override {}
+    void OnStop() override
+    {
+        SaveOptimizedTextures();
+    }
 
     void OnFrame() override
     {
@@ -257,6 +267,114 @@ private:
                 cameraControlSystem->ClearViewSwitchedFlag();
             }
         }
+    }
+
+    void SaveOptimizedTextures()
+    {
+        auto& gpuResourceMgr = renderContext_->GetDevice().GetGpuResourceManager();
+        auto& renderDataStoreMgr = renderContext_->GetRenderDataStoreManager();
+
+        // Find the LR texture by its registered name
+        RenderHandleReference lrTexture = gpuResourceMgr.GetImageHandle("lowres_albedo");
+        if (!RenderHandleUtil::IsValid(lrTexture.GetHandle())) {
+            std::cout << "SaveOptimizedTextures: lowres_albedo not found" << std::endl;
+            return;
+        }
+
+        const GpuImageDesc imgDesc = gpuResourceMgr.GetImageDescriptor(lrTexture);
+        const uint32_t w = imgDesc.width;
+        const uint32_t h = imgDesc.height;
+        // r8g8b8a8_unorm = 4 channels * 1 byte per channel
+        const uint32_t bytesPerPixel = 4; // RGBA uint8
+        const uint32_t byteSize = w * h * bytesPerPixel;
+
+        std::cout << "SaveOptimizedTextures: texture size " << w << "x" << h
+                  << ", format=" << static_cast<uint32_t>(imgDesc.format)
+                  << ", byteSize=" << byteSize << std::endl;
+
+        // Create a HOST_VISIBLE readback buffer
+        GpuBufferDesc bufDesc;
+        bufDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
+        bufDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                     CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        bufDesc.byteSize = byteSize;
+        bufDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
+                                     CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
+                                     CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
+        RenderHandleReference readbackBuffer = gpuResourceMgr.Create("sr_readback_buffer", bufDesc);
+        if (!RenderHandleUtil::IsValid(readbackBuffer.GetHandle())) {
+            std::cout << "SaveOptimizedTextures: failed to create readback buffer" << std::endl;
+            return;
+        }
+
+        // Schedule GPU copy: Image -> Buffer via staging (executed at end of next frame)
+        auto* staging = static_cast<IRenderDataStoreDefaultStaging*>(
+            renderDataStoreMgr.GetRenderDataStore("RenderDataStoreDefaultStaging").get());
+        if (!staging) {
+            std::cout << "SaveOptimizedTextures: staging data store not found" << std::endl;
+            return;
+        }
+
+        BufferImageCopy bic {};
+        bic.bufferOffset = 0;
+        bic.bufferRowLength = 0;
+        bic.bufferImageHeight = 0;
+        bic.imageSubresource = { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
+        bic.imageOffset = { 0, 0, 0 };
+        bic.imageExtent = { w, h, 1u };
+
+        staging->CopyImageToBuffer(lrTexture, readbackBuffer, bic,
+            IRenderDataStoreDefaultStaging::ResourceCopyInfo::END_FRAME);
+
+        std::cout << "SaveOptimizedTextures: CopyImageToBuffer scheduled, running final RenderFrame..." << std::endl;
+
+        // Run one final render frame to execute the GPU copy
+        {
+            auto* ecs = ecs_.get();
+            engine_->TickFrame(array_view(&ecs, 1));
+
+            IRenderer& renderer = renderContext_->GetRenderer();
+            vector<RenderHandleReference> rngs{ sceneRng_ };
+            rngs.emplace_back(cameraSceneDeferredRNG_);
+            renderer.RenderFrame(rngs);
+        }
+
+        std::cout << "SaveOptimizedTextures: Final frame rendered, reading back..." << std::endl;
+
+        // Now map the buffer and write to file
+        void* mappedData = gpuResourceMgr.MapBufferMemory(readbackBuffer);
+        if (!mappedData) {
+            std::cout << "SaveOptimizedTextures: MapBufferMemory failed" << std::endl;
+            return;
+        }
+
+        const uint8_t* u8Data = static_cast<const uint8_t*>(mappedData);
+
+        // Save as PNG directly (data is already RGBA uint8)
+        const char* pngPath = "optimized_albedo.png";
+        int result = stbi_write_png(pngPath, static_cast<int>(w), static_cast<int>(h),
+            4, u8Data, static_cast<int>(w * 4));
+        if (result) {
+            std::cout << "SaveOptimizedTextures: Saved PNG to " << pngPath << std::endl;
+        } else {
+            std::cout << "SaveOptimizedTextures: Failed to write PNG" << std::endl;
+        }
+
+        // Also save as HDR (convert uint8 to float)
+        const char* hdrPath = "optimized_albedo.hdr";
+        std::vector<float> floatPixels(w * h * 4);
+        for (uint32_t i = 0; i < w * h * 4; ++i) {
+            floatPixels[i] = static_cast<float>(u8Data[i]) / 255.0f;
+        }
+        result = stbi_write_hdr(hdrPath, static_cast<int>(w), static_cast<int>(h), 4, floatPixels.data());
+        if (result) {
+            std::cout << "SaveOptimizedTextures: Saved HDR to " << hdrPath << std::endl;
+        } else {
+            std::cout << "SaveOptimizedTextures: Failed to write HDR" << std::endl;
+        }
+
+        gpuResourceMgr.UnmapBuffer(readbackBuffer);
+        std::cout << "SaveOptimizedTextures: Done." << std::endl;
     }
 
 private:
