@@ -360,19 +360,6 @@ private:
             std::cout << "SaveOptimizedTextures: Failed to write PNG" << std::endl;
         }
 
-        // Also save as HDR (convert uint8 to float)
-        const char* hdrPath = "optimized_albedo.hdr";
-        std::vector<float> floatPixels(w * h * 4);
-        for (uint32_t i = 0; i < w * h * 4; ++i) {
-            floatPixels[i] = static_cast<float>(u8Data[i]) / 255.0f;
-        }
-        result = stbi_write_hdr(hdrPath, static_cast<int>(w), static_cast<int>(h), 4, floatPixels.data());
-        if (result) {
-            std::cout << "SaveOptimizedTextures: Saved HDR to " << hdrPath << std::endl;
-        } else {
-            std::cout << "SaveOptimizedTextures: Failed to write HDR" << std::endl;
-        }
-
         gpuResourceMgr.UnmapBuffer(readbackBuffer);
         std::cout << "SaveOptimizedTextures: Done." << std::endl;
     }
