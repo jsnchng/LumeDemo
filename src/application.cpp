@@ -170,6 +170,11 @@ public:
         }
         {
             const char* filename = "assets://glTF/DamagedHelmet/glTF/DamagedHelmet.gltf";
+            filename = "assets://glTF/BarramundiFish/glTF/BarramundiFish.gltf";
+            filename = "assets://glTF/BoomBox/glTF/BoomBox.gltf";
+            filename = "assets://glTF/Corset/glTF/Corset.gltf";
+            filename = "assets://glTF/MaterialsVariantsShoe/glTF/MaterialsVariantsShoe.gltf";
+            filename = "assets://glTF/WaterBottle/glTF/WaterBottle.gltf";
             auto loader = graphicsContext_->GetSceneUtil().GetSceneLoader(filename);
             auto result = loader->Load(filename);
             auto importer = loader->CreateSceneImporter(*ecs_);
