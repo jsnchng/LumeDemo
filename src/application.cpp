@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cinttypes>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -346,6 +347,9 @@ private:
 
         std::cout << "SaveOptimizedTextures: Final frame rendered, reading back..." << std::endl;
 
+        // Ensure the GPU has finished the copy operation before we map and read the buffer
+        renderContext_->GetDevice().WaitForIdle();
+
         // Now map the buffer and write to file
         void* mappedData = gpuResourceMgr.MapBufferMemory(readbackBuffer);
         if (!mappedData) {
@@ -355,10 +359,21 @@ private:
 
         const uint8_t* u8Data = static_cast<const uint8_t*>(mappedData);
 
-        // Save as PNG directly (data is already RGBA uint8)
+        // Convert linear RGB to sRGB
+        std::vector<uint8_t> srgbData(byteSize);
+        for (uint32_t i = 0; i < byteSize; i += 4) {
+            for (int c = 0; c < 3; ++c) { // Convert RGB channels
+                float linear = u8Data[i + c] / 255.0f;
+                float srgb = (linear <= 0.0031308f) ? (12.92f * linear) : (1.055f * std::pow(linear, 1.0f / 2.4f) - 0.055f);
+                srgbData[i + c] = static_cast<uint8_t>(std::clamp(std::round(srgb * 255.0f), 0.0f, 255.0f));
+            }
+            srgbData[i + 3] = u8Data[i + 3]; // Keep Alpha channel unchanged
+        }
+
+        // Save as PNG
         const char* pngPath = "optimized_albedo.png";
         int result = stbi_write_png(pngPath, static_cast<int>(w), static_cast<int>(h),
-            4, u8Data, static_cast<int>(w * 4));
+            4, srgbData.data(), static_cast<int>(w * 4));
         if (result) {
             std::cout << "SaveOptimizedTextures: Saved PNG to " << pngPath << std::endl;
         } else {
