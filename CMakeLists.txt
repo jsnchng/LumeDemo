@@ -112,6 +112,7 @@ target_compile_definitions(DemoCommon PUBLIC NOMINMAX)
 # Target: LumeDemo.exe
 #
 add_executable(LumeDemo src/application.cpp)
+target_include_directories(LumeDemo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 add_dependencies(LumeDemo
   PluginAGPRender
   PluginAGP3D
