@@ -142,7 +142,7 @@ public:
         transformManager_ = GetManager<ITransformComponentManager>(*ecs_);
         cameraManager_ = GetManager<ICameraComponentManager>(*ecs_);
         // .rng indicates that it is the same as the original file in 3d/rendernodegraphs
-        sceneRng_ = CreateRenderNodeGraph("pt://rendernodegraphs/core3d_rng_scene.rng");
+        sceneRng_ = CreateRenderNodeGraph("3drendernodegraphs://core3d_rng_scene.rng");
         // .json means the file has been changed from that in 3d/rendernodegraphs
         cameraSceneDeferredRNG_ = CreateRenderNodeGraph("pt://rendernodegraphs/core3d_rng_cam_scene_deferred.rng");
         {
