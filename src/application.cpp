@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cinttypes>
 #include <cmath>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -170,12 +171,12 @@ public:
             // Camera will be controlled by the plugin's CameraControlSystem
         }
         {
-            const char* filename = "assets://glTF/DamagedHelmet/glTF/DamagedHelmet.gltf";
-            filename = "assets://glTF/BarramundiFish/glTF/BarramundiFish.gltf";
-            filename = "assets://glTF/BoomBox/glTF/BoomBox.gltf";
-            filename = "assets://glTF/Corset/glTF/Corset.gltf";
-            filename = "assets://glTF/MaterialsVariantsShoe/glTF/MaterialsVariantsShoe.gltf";
-            filename = "assets://glTF/WaterBottle/glTF/WaterBottle.gltf";
+            const char* filename = std::getenv("LUME_MODEL_PATH");
+            if (!filename || filename[0] == '\0') {
+                filename = "assets://glTF/WaterBottle/glTF/WaterBottle.gltf";
+            }
+            std::cout << "Loading model: " << filename << std::endl;
+
             auto loader = graphicsContext_->GetSceneUtil().GetSceneLoader(filename);
             auto result = loader->Load(filename);
             auto importer = loader->CreateSceneImporter(*ecs_);
