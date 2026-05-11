@@ -291,20 +291,30 @@ private:
         const GpuImageDesc imgDesc = gpuResourceMgr.GetImageDescriptor(lrTexture);
         const uint32_t w = imgDesc.width;
         const uint32_t h = imgDesc.height;
-        // r8g8b8a8_unorm = 4 channels * 1 byte per channel
-        const uint32_t bytesPerPixel = 4; // RGBA uint8
-        const uint32_t byteSize = w * h * bytesPerPixel;
+        uint32_t sourceBytesPerPixel = 0u;
+        if (imgDesc.format == BASE_FORMAT_R32G32B32A32_SFLOAT) {
+            sourceBytesPerPixel = 4u * sizeof(float);
+        } else if ((imgDesc.format == BASE_FORMAT_R8G8B8A8_UNORM) || (imgDesc.format == BASE_FORMAT_R8G8B8A8_SRGB)) {
+            sourceBytesPerPixel = 4u;
+        } else {
+            std::cout << "SaveOptimizedTextures: unsupported lowres_albedo format "
+                      << static_cast<uint32_t>(imgDesc.format) << std::endl;
+            return;
+        }
+        const uint32_t pngBytesPerPixel = 4u;
+        const uint32_t readbackByteSize = w * h * sourceBytesPerPixel;
+        const uint32_t pngByteSize = w * h * pngBytesPerPixel;
 
         std::cout << "SaveOptimizedTextures: texture size " << w << "x" << h
                   << ", format=" << static_cast<uint32_t>(imgDesc.format)
-                  << ", byteSize=" << byteSize << std::endl;
+                  << ", readbackByteSize=" << readbackByteSize << std::endl;
 
         // Create a HOST_VISIBLE readback buffer
         GpuBufferDesc bufDesc;
         bufDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
         bufDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                      CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        bufDesc.byteSize = byteSize;
+        bufDesc.byteSize = readbackByteSize;
         bufDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
                                      CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
                                      CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
@@ -358,17 +368,37 @@ private:
             return;
         }
 
-        const uint8_t* u8Data = static_cast<const uint8_t*>(mappedData);
+        const auto linearToSrgb8 = [](float linear) -> uint8_t {
+            linear = std::clamp(linear, 0.0f, 1.0f);
+            const float srgb = (linear <= 0.0031308f)
+                ? (linear * 12.92f)
+                : (1.055f * std::pow(linear, 1.0f / 2.4f) - 0.055f);
+            return static_cast<uint8_t>(std::round(std::clamp(srgb, 0.0f, 1.0f) * 255.0f));
+        };
+        const auto linearToUnorm8 = [](float value) -> uint8_t {
+            return static_cast<uint8_t>(std::round(std::clamp(value, 0.0f, 1.0f) * 255.0f));
+        };
 
-        // Convert linear RGB to sRGB
-        std::vector<uint8_t> srgbData(byteSize);
-        for (uint32_t i = 0; i < byteSize; i += 4) {
-            for (int c = 0; c < 3; ++c) { // Convert RGB channels
-                float linear = u8Data[i + c] / 255.0f;
-                float srgb = (linear <= 0.0031308f) ? (12.92f * linear) : (1.055f * std::pow(linear, 1.0f / 2.4f) - 0.055f);
-                srgbData[i + c] = static_cast<uint8_t>(std::clamp(std::round(srgb * 255.0f), 0.0f, 255.0f));
+        std::vector<uint8_t> srgbData(pngByteSize);
+        if (imgDesc.format == BASE_FORMAT_R32G32B32A32_SFLOAT) {
+            const float* rgba32fData = static_cast<const float*>(mappedData);
+            for (uint32_t pixel = 0; pixel < w * h; ++pixel) {
+                srgbData[pixel * 4u + 0u] = linearToSrgb8(rgba32fData[pixel * 4u + 0u]);
+                srgbData[pixel * 4u + 1u] = linearToSrgb8(rgba32fData[pixel * 4u + 1u]);
+                srgbData[pixel * 4u + 2u] = linearToSrgb8(rgba32fData[pixel * 4u + 2u]);
+                srgbData[pixel * 4u + 3u] = linearToUnorm8(rgba32fData[pixel * 4u + 3u]);
             }
-            srgbData[i + 3] = u8Data[i + 3]; // Keep Alpha channel unchanged
+        } else if (imgDesc.format == BASE_FORMAT_R8G8B8A8_UNORM) {
+            const uint8_t* rgba8Data = static_cast<const uint8_t*>(mappedData);
+            for (uint32_t pixel = 0; pixel < w * h; ++pixel) {
+                srgbData[pixel * 4u + 0u] = linearToSrgb8(rgba8Data[pixel * 4u + 0u] / 255.0f);
+                srgbData[pixel * 4u + 1u] = linearToSrgb8(rgba8Data[pixel * 4u + 1u] / 255.0f);
+                srgbData[pixel * 4u + 2u] = linearToSrgb8(rgba8Data[pixel * 4u + 2u] / 255.0f);
+                srgbData[pixel * 4u + 3u] = rgba8Data[pixel * 4u + 3u];
+            }
+        } else {
+            const uint8_t* rgba8Data = static_cast<const uint8_t*>(mappedData);
+            std::copy(rgba8Data, rgba8Data + pngByteSize, srgbData.begin());
         }
 
         // Save as PNG
