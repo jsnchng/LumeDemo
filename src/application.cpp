@@ -143,10 +143,6 @@ public:
         ecs_->Initialize();
         transformManager_ = GetManager<ITransformComponentManager>(*ecs_);
         cameraManager_ = GetManager<ICameraComponentManager>(*ecs_);
-        // .rng indicates that it is the same as the original file in 3d/rendernodegraphs
-        sceneRng_ = CreateRenderNodeGraph("3drendernodegraphs://core3d_rng_scene.rng");
-        // .json means the file has been changed from that in 3d/rendernodegraphs
-        cameraSceneDeferredRNG_ = CreateRenderNodeGraph("pt://rendernodegraphs/core3d_rng_cam_scene_deferred.rng");
         {
             auto* nodeSystem = GetSystem<INodeSystem>(*ecs_);
             auto rootNode = nodeSystem->CreateNode();
@@ -166,6 +162,11 @@ public:
             const auto& sceneUtil = graphicsContext_->GetSceneUtil();
             cameraEntity_ = sceneUtil.CreateCamera(*ecs_, Math::Vec3(0.f, 0.f, 3.f), {}, 0.1f, 1000.f, 60.f);
             activeCamera_ = cameraEntity_;
+            auto cameraHandle = cameraManager_->Write(activeCamera_);
+            if (cameraHandle) {
+                cameraHandle->renderingPipeline = CameraComponent::RenderingPipeline::CUSTOM;
+                cameraHandle->customRenderNodeGraphFile = "pt://rendernodegraphs/core3d_rng_cam_scene_deferred.rng";
+            }
             
             // CameraControlSystem is automatically initialized by the plugin
             // Camera will be controlled by the plugin's CameraControlSystem
@@ -204,27 +205,12 @@ public:
         
         if (needRender) {
             IRenderer& renderer = renderContext_->GetRenderer();
-            vector<RenderHandleReference> rngs{ sceneRng_ };
-            rngs.emplace_back(cameraSceneDeferredRNG_);
+            const auto rngs = graphicsContext_->GetRenderNodeGraphs(*ecs_);
             renderer.RenderFrame(rngs);
         }
     }
 
 private:
-    RenderHandleReference CreateRenderNodeGraph(const string_view rngPath)
-    {
-        IRenderNodeGraphManager& graphManager = renderContext_->GetRenderNodeGraphManager();
-
-        auto loader = &graphManager.GetRenderNodeGraphLoader();
-        auto const result = loader->Load(rngPath);
-        if (!result.error.empty()) {
-            return {};
-        }
-        return graphManager.Create(
-            IRenderNodeGraphManager::RenderNodeGraphUsageType::RENDER_NODE_GRAPH_STATIC, result.desc
-        );
-    }
-
     void UpdateCamera()
     {
         if (updateCamera_ && cameraManager_) {
@@ -233,6 +219,8 @@ private:
             auto cameraHandle = cameraManager_->Write(activeCamera_);
             if (cameraHandle) {
                 cameraHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
+                cameraHandle->renderingPipeline = CameraComponent::RenderingPipeline::CUSTOM;
+                cameraHandle->customRenderNodeGraphFile = "pt://rendernodegraphs/core3d_rng_cam_scene_deferred.rng";
             }
             const auto& sceneUtil = graphicsContext_->GetSceneUtil();
             sceneUtil.UpdateCameraViewport(*ecs_, activeCamera_, { windowWidth_, windowHeight_ }, false, 60.f, 1.f);
@@ -351,8 +339,7 @@ private:
             engine_->TickFrame(array_view(&ecs, 1));
 
             IRenderer& renderer = renderContext_->GetRenderer();
-            vector<RenderHandleReference> rngs{ sceneRng_ };
-            rngs.emplace_back(cameraSceneDeferredRNG_);
+            const auto rngs = graphicsContext_->GetRenderNodeGraphs(*ecs_);
             renderer.RenderFrame(rngs);
         }
 
@@ -420,8 +407,6 @@ private:
     IEcs::Ptr ecs_;
     IRenderContext::Ptr renderContext_;
     IGraphicsContext::Ptr graphicsContext_;
-    RenderHandleReference sceneRng_;
-    RenderHandleReference cameraSceneDeferredRNG_;
     uint32_t windowWidth_;
     uint32_t windowHeight_;
     bool autoAspect_;
