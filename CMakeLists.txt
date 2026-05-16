@@ -86,13 +86,6 @@ set_target_properties(PluginLumePT PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins)
 
 #
-# Target: glfw
-#
-if(NOT TARGET glfw)
-  add_subdirectory(third_party/glfw-3.4 glfw)
-endif()
-
-#
 # Target: DemoCommon
 #
 add_library(DemoCommon
@@ -103,8 +96,7 @@ target_link_libraries(DemoCommon PRIVATE
   AGPEngine::AGPEngineAPI
   AGPRender::AGPRenderAPI)
 target_link_libraries(DemoCommon PUBLIC
-  Vulkan::Vulkan
-  glfw)
+  Vulkan::Vulkan)
 target_compile_definitions(DemoCommon PUBLIC RENDER_HAS_VULKAN_BACKEND=1)
 target_compile_definitions(DemoCommon PUBLIC NOMINMAX)
 

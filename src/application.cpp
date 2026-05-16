@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -37,6 +38,8 @@
 #include <render/intf_renderer.h>
 #include <render/nodecontext/intf_render_node_graph_manager.h>
 #include <render/resource_handle.h>
+#include <render/util/intf_render_frame_util.h>
+#include <render/util/intf_render_util.h>
 #if RENDER_HAS_VULKAN_BACKEND
 #include <render/vulkan/intf_device_vk.h>
 #endif
@@ -119,23 +122,27 @@ public:
         return device;
     }
 
-    void OnWindowUpdate(SwapchainCreateInfo swapchainCreateInfo, int width, int height) override
+    void OnRenderTargetUpdate(int width, int height) override
     {
         if (width > 0 && height > 0) {
-            windowWidth_ = width;
-            windowHeight_ = height;
+            windowWidth_ = static_cast<uint32_t>(width);
+            windowHeight_ = static_cast<uint32_t>(height);
+            CreateOffscreenBackBuffer(windowWidth_, windowHeight_);
+
             const auto& sceneUtil = graphicsContext_->GetSceneUtil();
             sceneUtil.UpdateCameraViewport(*ecs_, activeCamera_, { windowWidth_, windowHeight_ }, autoAspect_, originalFov_, orthoScale_);
-            renderContext_->GetDevice().CreateSwapchain(swapchainCreateInfo);
         }
         else {
-            renderContext_->GetDevice().DestroySwapchain();
+            offscreenBackBuffer_ = {};
         }
     }
 
-    void OnWindowDestroy() override
+    void OnRenderTargetDestroy() override
     {
-        renderContext_->GetDevice().DestroySwapchain();
+        if (renderContext_) {
+            renderContext_->GetDevice().WaitForIdle();
+        }
+        offscreenBackBuffer_ = {};
     }
 
     void OnStart() override
@@ -211,6 +218,53 @@ public:
     }
 
 private:
+    void CreateOffscreenBackBuffer(uint32_t width, uint32_t height)
+    {
+        auto& gpuResourceMgr = renderContext_->GetDevice().GetGpuResourceManager();
+        if (RenderHandleUtil::IsValid(offscreenBackBuffer_.GetHandle())) {
+            const GpuImageDesc currentDesc = gpuResourceMgr.GetImageDescriptor(offscreenBackBuffer_);
+            if ((currentDesc.width == width) && (currentDesc.height == height)) {
+                ConfigureOffscreenBackBuffer();
+                return;
+            }
+        }
+
+        GpuImageDesc desc;
+        desc.imageType = CORE_IMAGE_TYPE_2D;
+        desc.imageViewType = CORE_IMAGE_VIEW_TYPE_2D;
+        desc.format = BASE_FORMAT_R8G8B8A8_SRGB;
+        desc.imageTiling = CORE_IMAGE_TILING_OPTIMAL;
+        desc.usageFlags = CORE_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                          CORE_IMAGE_USAGE_SAMPLED_BIT |
+                          CORE_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        desc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        desc.engineCreationFlags = CORE_ENGINE_IMAGE_CREATION_DYNAMIC_BARRIERS;
+        desc.width = width;
+        desc.height = height;
+        desc.depth = 1u;
+        desc.mipCount = 1u;
+        desc.layerCount = 1u;
+        desc.sampleCountFlags = CORE_SAMPLE_COUNT_1_BIT;
+
+        offscreenBackBuffer_ = gpuResourceMgr.Create("OFFSCREEN_BACKBUFFER", desc);
+        if (!RenderHandleUtil::IsValid(offscreenBackBuffer_.GetHandle())) {
+            std::cout << "CreateOffscreenBackBuffer: failed to create " << width << "x" << height << " target" << std::endl;
+            return;
+        }
+
+        ConfigureOffscreenBackBuffer();
+    }
+
+    void ConfigureOffscreenBackBuffer()
+    {
+        IRenderFrameUtil::BackBufferConfiguration config;
+        config.backBufferName = "CORE_DEFAULT_BACKBUFFER";
+        config.backBufferType = IRenderFrameUtil::BackBufferConfiguration::BackBufferType::GPU_IMAGE;
+        config.backBufferHandle = offscreenBackBuffer_;
+        config.present = false;
+        renderContext_->GetRenderUtil().GetRenderFrameUtil().SetBackBufferConfiguration(config);
+    }
+
     void UpdateCamera()
     {
         if (updateCamera_ && cameraManager_) {
@@ -269,50 +323,6 @@ private:
         auto& gpuResourceMgr = renderContext_->GetDevice().GetGpuResourceManager();
         auto& renderDataStoreMgr = renderContext_->GetRenderDataStoreManager();
 
-        // Find the LR texture by its registered name
-        RenderHandleReference lrTexture = gpuResourceMgr.GetImageHandle("lowres_albedo");
-        if (!RenderHandleUtil::IsValid(lrTexture.GetHandle())) {
-            std::cout << "SaveOptimizedTextures: lowres_albedo not found" << std::endl;
-            return;
-        }
-
-        const GpuImageDesc imgDesc = gpuResourceMgr.GetImageDescriptor(lrTexture);
-        const uint32_t w = imgDesc.width;
-        const uint32_t h = imgDesc.height;
-        uint32_t sourceBytesPerPixel = 0u;
-        if (imgDesc.format == BASE_FORMAT_R32G32B32A32_SFLOAT) {
-            sourceBytesPerPixel = 4u * sizeof(float);
-        } else if ((imgDesc.format == BASE_FORMAT_R8G8B8A8_UNORM) || (imgDesc.format == BASE_FORMAT_R8G8B8A8_SRGB)) {
-            sourceBytesPerPixel = 4u;
-        } else {
-            std::cout << "SaveOptimizedTextures: unsupported lowres_albedo format "
-                      << static_cast<uint32_t>(imgDesc.format) << std::endl;
-            return;
-        }
-        const uint32_t pngBytesPerPixel = 4u;
-        const uint32_t readbackByteSize = w * h * sourceBytesPerPixel;
-        const uint32_t pngByteSize = w * h * pngBytesPerPixel;
-
-        std::cout << "SaveOptimizedTextures: texture size " << w << "x" << h
-                  << ", format=" << static_cast<uint32_t>(imgDesc.format)
-                  << ", readbackByteSize=" << readbackByteSize << std::endl;
-
-        // Create a HOST_VISIBLE readback buffer
-        GpuBufferDesc bufDesc;
-        bufDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
-        bufDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                     CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        bufDesc.byteSize = readbackByteSize;
-        bufDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
-                                     CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
-                                     CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
-        RenderHandleReference readbackBuffer = gpuResourceMgr.Create("sr_readback_buffer", bufDesc);
-        if (!RenderHandleUtil::IsValid(readbackBuffer.GetHandle())) {
-            std::cout << "SaveOptimizedTextures: failed to create readback buffer" << std::endl;
-            return;
-        }
-
-        // Schedule GPU copy: Image -> Buffer via staging (executed at end of next frame)
         auto* staging = static_cast<IRenderDataStoreDefaultStaging*>(
             renderDataStoreMgr.GetRenderDataStore("RenderDataStoreDefaultStaging").get());
         if (!staging) {
@@ -320,16 +330,77 @@ private:
             return;
         }
 
-        BufferImageCopy bic {};
-        bic.bufferOffset = 0;
-        bic.bufferRowLength = 0;
-        bic.bufferImageHeight = 0;
-        bic.imageSubresource = { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
-        bic.imageOffset = { 0, 0, 0 };
-        bic.imageExtent = { w, h, 1u };
+        struct ReadbackImage {
+            const char* imageName;
+            const char* pngPath;
+            RenderHandleReference image;
+            RenderHandleReference buffer;
+            GpuImageDesc desc;
+            uint32_t sourceBytesPerPixel { 0u };
+        };
 
-        staging->CopyImageToBuffer(lrTexture, readbackBuffer, bic,
-            IRenderDataStoreDefaultStaging::ResourceCopyInfo::END_FRAME);
+        const auto sourceBytesPerPixel = [](Format format) -> uint32_t {
+            if (format == BASE_FORMAT_R32G32B32A32_SFLOAT) {
+                return 4u * sizeof(float);
+            }
+            if ((format == BASE_FORMAT_R8G8B8A8_UNORM) || (format == BASE_FORMAT_R8G8B8A8_SRGB) ||
+                (format == BASE_FORMAT_B10G11R11_UFLOAT_PACK32)) {
+                return 4u;
+            }
+            return 0u;
+        };
+
+        vector<ReadbackImage> readbacks = {
+            { "lrTexture", "optimized_albedo.png" },
+            { "predicted_color_output", "pc.png" },
+            { "color", "gt.png" },
+        };
+
+        for (auto& readback : readbacks) {
+            readback.image = gpuResourceMgr.GetImageHandle(readback.imageName);
+            if (!RenderHandleUtil::IsValid(readback.image.GetHandle())) {
+                std::cout << "SaveOptimizedTextures: " << readback.imageName << " not found" << std::endl;
+                return;
+            }
+
+            readback.desc = gpuResourceMgr.GetImageDescriptor(readback.image);
+            readback.sourceBytesPerPixel = sourceBytesPerPixel(readback.desc.format);
+            if (readback.sourceBytesPerPixel == 0u) {
+                std::cout << "SaveOptimizedTextures: unsupported " << readback.imageName << " format "
+                          << static_cast<uint32_t>(readback.desc.format) << std::endl;
+                return;
+            }
+
+            GpuBufferDesc bufDesc;
+            bufDesc.usageFlags = CORE_BUFFER_USAGE_TRANSFER_DST_BIT;
+            bufDesc.memoryPropertyFlags = CORE_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                         CORE_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            bufDesc.byteSize = readback.desc.width * readback.desc.height * readback.sourceBytesPerPixel;
+            bufDesc.engineCreationFlags = CORE_ENGINE_BUFFER_CREATION_MAP_OUTSIDE_RENDERER |
+                                         CORE_ENGINE_BUFFER_CREATION_CREATE_IMMEDIATE |
+                                         CORE_ENGINE_BUFFER_CREATION_DEFERRED_DESTROY;
+            readback.buffer = gpuResourceMgr.Create(string("sr_readback_") + readback.imageName, bufDesc);
+            if (!RenderHandleUtil::IsValid(readback.buffer.GetHandle())) {
+                std::cout << "SaveOptimizedTextures: failed to create readback buffer for "
+                          << readback.imageName << std::endl;
+                return;
+            }
+
+            BufferImageCopy bic {};
+            bic.bufferOffset = 0;
+            bic.bufferRowLength = 0;
+            bic.bufferImageHeight = 0;
+            bic.imageSubresource = { CORE_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1u };
+            bic.imageOffset = { 0, 0, 0 };
+            bic.imageExtent = { readback.desc.width, readback.desc.height, 1u };
+
+            staging->CopyImageToBuffer(readback.image, readback.buffer, bic,
+                IRenderDataStoreDefaultStaging::ResourceCopyInfo::END_FRAME);
+
+            std::cout << "SaveOptimizedTextures: scheduled " << readback.imageName << " -> "
+                      << readback.pngPath << " (" << readback.desc.width << "x" << readback.desc.height
+                      << ", format=" << static_cast<uint32_t>(readback.desc.format) << ")" << std::endl;
+        }
 
         std::cout << "SaveOptimizedTextures: CopyImageToBuffer scheduled, running final RenderFrame..." << std::endl;
 
@@ -348,13 +419,6 @@ private:
         // Ensure the GPU has finished the copy operation before we map and read the buffer
         renderContext_->GetDevice().WaitForIdle();
 
-        // Now map the buffer and write to file
-        void* mappedData = gpuResourceMgr.MapBufferMemory(readbackBuffer);
-        if (!mappedData) {
-            std::cout << "SaveOptimizedTextures: MapBufferMemory failed" << std::endl;
-            return;
-        }
-
         const auto linearToSrgb8 = [](float linear) -> uint8_t {
             linear = std::clamp(linear, 0.0f, 1.0f);
             const float srgb = (linear <= 0.0031308f)
@@ -365,40 +429,73 @@ private:
         const auto linearToUnorm8 = [](float value) -> uint8_t {
             return static_cast<uint8_t>(std::round(std::clamp(value, 0.0f, 1.0f) * 255.0f));
         };
-
-        std::vector<uint8_t> srgbData(pngByteSize);
-        if (imgDesc.format == BASE_FORMAT_R32G32B32A32_SFLOAT) {
-            const float* rgba32fData = static_cast<const float*>(mappedData);
-            for (uint32_t pixel = 0; pixel < w * h; ++pixel) {
-                srgbData[pixel * 4u + 0u] = linearToSrgb8(rgba32fData[pixel * 4u + 0u]);
-                srgbData[pixel * 4u + 1u] = linearToSrgb8(rgba32fData[pixel * 4u + 1u]);
-                srgbData[pixel * 4u + 2u] = linearToSrgb8(rgba32fData[pixel * 4u + 2u]);
-                srgbData[pixel * 4u + 3u] = linearToUnorm8(rgba32fData[pixel * 4u + 3u]);
+        const auto unpackUnsignedFloat = [](uint32_t bits, uint32_t mantissaBits) -> float {
+            const uint32_t mantissaMask = (1u << mantissaBits) - 1u;
+            const uint32_t mantissa = bits & mantissaMask;
+            const uint32_t exponent = bits >> mantissaBits;
+            if (exponent == 0u) {
+                return std::ldexp(static_cast<float>(mantissa), -static_cast<int>(mantissaBits + 14u));
             }
-        } else if (imgDesc.format == BASE_FORMAT_R8G8B8A8_UNORM) {
-            const uint8_t* rgba8Data = static_cast<const uint8_t*>(mappedData);
-            for (uint32_t pixel = 0; pixel < w * h; ++pixel) {
-                srgbData[pixel * 4u + 0u] = linearToSrgb8(rgba8Data[pixel * 4u + 0u] / 255.0f);
-                srgbData[pixel * 4u + 1u] = linearToSrgb8(rgba8Data[pixel * 4u + 1u] / 255.0f);
-                srgbData[pixel * 4u + 2u] = linearToSrgb8(rgba8Data[pixel * 4u + 2u] / 255.0f);
-                srgbData[pixel * 4u + 3u] = rgba8Data[pixel * 4u + 3u];
+            if (exponent == 31u) {
+                return mantissa ? 0.0f : std::numeric_limits<float>::infinity();
             }
-        } else {
-            const uint8_t* rgba8Data = static_cast<const uint8_t*>(mappedData);
-            std::copy(rgba8Data, rgba8Data + pngByteSize, srgbData.begin());
-        }
+            return std::ldexp(static_cast<float>((1u << mantissaBits) | mantissa),
+                static_cast<int>(exponent) - 15 - static_cast<int>(mantissaBits));
+        };
 
-        // Save as PNG
-        const char* pngPath = "optimized_albedo.png";
-        int result = stbi_write_png(pngPath, static_cast<int>(w), static_cast<int>(h),
-            4, srgbData.data(), static_cast<int>(w * 4));
-        if (result) {
-            std::cout << "SaveOptimizedTextures: Saved PNG to " << pngPath << std::endl;
-        } else {
-            std::cout << "SaveOptimizedTextures: Failed to write PNG" << std::endl;
-        }
+        for (const auto& readback : readbacks) {
+            void* mappedData = gpuResourceMgr.MapBufferMemory(readback.buffer);
+            if (!mappedData) {
+                std::cout << "SaveOptimizedTextures: MapBufferMemory failed for "
+                          << readback.imageName << std::endl;
+                continue;
+            }
 
-        gpuResourceMgr.UnmapBuffer(readbackBuffer);
+            const uint32_t w = readback.desc.width;
+            const uint32_t h = readback.desc.height;
+            const uint32_t pngByteSize = w * h * 4u;
+            std::vector<uint8_t> srgbData(pngByteSize);
+
+            if (readback.desc.format == BASE_FORMAT_R32G32B32A32_SFLOAT) {
+                const float* rgba32fData = static_cast<const float*>(mappedData);
+                for (uint32_t pixel = 0; pixel < w * h; ++pixel) {
+                    srgbData[pixel * 4u + 0u] = linearToSrgb8(rgba32fData[pixel * 4u + 0u]);
+                    srgbData[pixel * 4u + 1u] = linearToSrgb8(rgba32fData[pixel * 4u + 1u]);
+                    srgbData[pixel * 4u + 2u] = linearToSrgb8(rgba32fData[pixel * 4u + 2u]);
+                    srgbData[pixel * 4u + 3u] = linearToUnorm8(rgba32fData[pixel * 4u + 3u]);
+                }
+            } else if (readback.desc.format == BASE_FORMAT_R8G8B8A8_UNORM) {
+                const uint8_t* rgba8Data = static_cast<const uint8_t*>(mappedData);
+                for (uint32_t pixel = 0; pixel < w * h; ++pixel) {
+                    srgbData[pixel * 4u + 0u] = linearToSrgb8(rgba8Data[pixel * 4u + 0u] / 255.0f);
+                    srgbData[pixel * 4u + 1u] = linearToSrgb8(rgba8Data[pixel * 4u + 1u] / 255.0f);
+                    srgbData[pixel * 4u + 2u] = linearToSrgb8(rgba8Data[pixel * 4u + 2u] / 255.0f);
+                    srgbData[pixel * 4u + 3u] = rgba8Data[pixel * 4u + 3u];
+                }
+            } else if (readback.desc.format == BASE_FORMAT_B10G11R11_UFLOAT_PACK32) {
+                const uint32_t* packedData = static_cast<const uint32_t*>(mappedData);
+                for (uint32_t pixel = 0; pixel < w * h; ++pixel) {
+                    const uint32_t packed = packedData[pixel];
+                    srgbData[pixel * 4u + 0u] = linearToSrgb8(unpackUnsignedFloat((packed >> 0u) & 0x7ffu, 6u));
+                    srgbData[pixel * 4u + 1u] = linearToSrgb8(unpackUnsignedFloat((packed >> 11u) & 0x7ffu, 6u));
+                    srgbData[pixel * 4u + 2u] = linearToSrgb8(unpackUnsignedFloat((packed >> 22u) & 0x3ffu, 5u));
+                    srgbData[pixel * 4u + 3u] = 255u;
+                }
+            } else {
+                const uint8_t* rgba8Data = static_cast<const uint8_t*>(mappedData);
+                std::copy(rgba8Data, rgba8Data + pngByteSize, srgbData.begin());
+            }
+
+            int result = stbi_write_png(readback.pngPath, static_cast<int>(w), static_cast<int>(h),
+                4, srgbData.data(), static_cast<int>(w * 4));
+            if (result) {
+                std::cout << "SaveOptimizedTextures: Saved PNG to " << readback.pngPath << std::endl;
+            } else {
+                std::cout << "SaveOptimizedTextures: Failed to write " << readback.pngPath << std::endl;
+            }
+
+            gpuResourceMgr.UnmapBuffer(readback.buffer);
+        }
         std::cout << "SaveOptimizedTextures: Done." << std::endl;
     }
 
@@ -407,16 +504,17 @@ private:
     IEcs::Ptr ecs_;
     IRenderContext::Ptr renderContext_;
     IGraphicsContext::Ptr graphicsContext_;
-    uint32_t windowWidth_;
-    uint32_t windowHeight_;
-    bool autoAspect_;
-    float originalFov_;
-    float  orthoScale_;
+    RenderHandleReference offscreenBackBuffer_;
+    uint32_t windowWidth_ = 1024u;
+    uint32_t windowHeight_ = 1024u;
+    bool autoAspect_ = false;
+    float originalFov_ = 60.0f;
+    float  orthoScale_ = 1.0f;
     Entity activeCamera_;
     Entity rootNodeEntity_;
     Entity cameraEntity_;
-    ITransformComponentManager* transformManager_;
-    ICameraComponentManager* cameraManager_;
+    ITransformComponentManager* transformManager_ = nullptr;
+    ICameraComponentManager* cameraManager_ = nullptr;
     vector<ResourceData> importedResources_;
     bool updateCamera_ = true;
     bool pendingViewSwitchClear_ = false;  // Delayed flag for buffer clearing
