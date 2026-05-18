@@ -1,10 +1,12 @@
 #include <algorithm>
+#include <cerrno>
 #include <cinttypes>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -48,10 +50,13 @@
 #include <3d/ecs/components/fog_component.h>
 #include <3d/ecs/components/light_component.h>
 #include <3d/ecs/components/material_component.h>
+#include <3d/ecs/components/mesh_component.h>
 #include <3d/ecs/components/name_component.h>
 #include <3d/ecs/components/render_configuration_component.h>
 #include <3d/ecs/components/render_handle_component.h>
+#include <3d/ecs/components/render_mesh_component.h>
 #include <3d/ecs/components/transform_component.h>
+#include <3d/ecs/components/uri_component.h>
 #include <3d/ecs/systems/intf_animation_system.h>
 #include <3d/ecs/systems/intf_node_system.h>
 #include <3d/implementation_uids.h>
@@ -192,6 +197,7 @@ public:
             const auto& importResult = importer->GetResult();
             importedResources_.push_back(importResult.data);
             importer->ImportScene(0, rootNodeEntity_, CORE_IMPORT_COMPONENT_FLAG_BITS_ALL);
+            ApplySubMeshFilterFromEnv();
         }
     }
 
@@ -316,6 +322,196 @@ private:
                 cameraControlSystem->ClearViewSwitchedFlag();
             }
         }
+    }
+
+    bool TryParseEnvIndex(const char* envName, uint32_t& index) const
+    {
+        const char* value = std::getenv(envName);
+        if (!value || value[0] == '\0') {
+            return false;
+        }
+
+        errno = 0;
+        char* end = nullptr;
+        const unsigned long parsed = std::strtoul(value, &end, 10);
+        if ((errno != 0) || (end == value) || (end && *end != '\0') ||
+            (parsed > static_cast<unsigned long>(std::numeric_limits<uint32_t>::max()))) {
+            std::cout << envName << ": invalid value '" << value << "', expected a zero-based index" << std::endl;
+            return false;
+        }
+
+        index = static_cast<uint32_t>(parsed);
+        return true;
+    }
+
+    bool TryGetSubMeshIndexFromEnv(uint32_t& subMeshIndex) const
+    {
+        return TryParseEnvIndex("subMesh", subMeshIndex);
+    }
+
+    struct MeshSelector {
+        string value;
+        bool hasIndex { false };
+        uint32_t index { 0u };
+    };
+
+    bool TryGetMeshSelectorFromEnv(MeshSelector& selector) const
+    {
+        const char* value = std::getenv("mesh");
+        if (!value || value[0] == '\0') {
+            std::cout << "subMesh: set mesh=<gltf mesh index or mesh name> together with subMesh" << std::endl;
+            return false;
+        }
+
+        selector.value = value;
+        selector.hasIndex = TryParseEnvIndex("mesh", selector.index);
+        if (!selector.hasIndex) {
+            std::cout << "mesh: using '" << selector.value.c_str() << "' as mesh name" << std::endl;
+        }
+        return true;
+    }
+
+    bool MeshMatchesSelector(Entity meshEntity, const MeshSelector& selector) const
+    {
+        auto* nameManager = GetManager<INameComponentManager>(*ecs_);
+        auto* uriManager = GetManager<IUriComponentManager>(*ecs_);
+
+        if (selector.hasIndex && uriManager) {
+            if (const auto uriHandle = uriManager->Read(meshEntity); uriHandle) {
+                const string meshUriSuffix = string("/meshes/") + to_string(selector.index);
+                if (uriHandle->uri.ends_with(meshUriSuffix)) {
+                    return true;
+                }
+            }
+        }
+
+        if (nameManager) {
+            if (const auto nameHandle = nameManager->Read(meshEntity); nameHandle) {
+                if (nameHandle->name == selector.value) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    string GetMeshLabel(Entity meshEntity) const
+    {
+        auto* nameManager = GetManager<INameComponentManager>(*ecs_);
+        if (nameManager) {
+            if (const auto nameHandle = nameManager->Read(meshEntity); nameHandle && !nameHandle->name.empty()) {
+                return nameHandle->name;
+            }
+        }
+        return string("entity ") + to_string(meshEntity.id);
+    }
+
+    Entity GetOrCreateFilteredMeshCopy(Entity sourceMesh, uint32_t subMeshIndex,
+        vector<std::pair<Entity, Entity>>& filteredMeshes)
+    {
+        for (const auto& item : filteredMeshes) {
+            if (item.first == sourceMesh) {
+                return item.second;
+            }
+        }
+
+        auto* meshManager = GetManager<IMeshComponentManager>(*ecs_);
+        const auto sourceHandle = meshManager->Read(sourceMesh);
+        if (!sourceHandle) {
+            return {};
+        }
+
+        const auto subMeshCount = sourceHandle->submeshes.size();
+        if (subMeshIndex >= subMeshCount) {
+            const string meshLabel = GetMeshLabel(sourceMesh);
+            std::cout << "subMesh: requested index " << subMeshIndex << " but mesh " << meshLabel.c_str()
+                      << " only has " << subMeshCount << " submesh(es)" << std::endl;
+            return {};
+        }
+
+        const Entity filteredMesh = ecs_->CloneEntity(sourceMesh);
+        auto filteredHandle = meshManager->Write(filteredMesh);
+        if (!filteredHandle) {
+            std::cout << "subMesh: failed to write cloned mesh " << filteredMesh.id << std::endl;
+            return {};
+        }
+
+        const MeshComponent::Submesh selectedSubMesh = sourceHandle->submeshes[subMeshIndex];
+        filteredHandle->submeshes.clear();
+        filteredHandle->submeshes.push_back(selectedSubMesh);
+        filteredHandle->aabbMin = selectedSubMesh.aabbMin;
+        filteredHandle->aabbMax = selectedSubMesh.aabbMax;
+
+        filteredMeshes.push_back({ sourceMesh, filteredMesh });
+        const string meshLabel = GetMeshLabel(sourceMesh);
+        std::cout << "subMesh: cloned mesh " << meshLabel.c_str() << " (" << sourceMesh.id << ") -> "
+                  << filteredMesh.id
+                  << ", keeping submesh " << subMeshIndex << " of " << subMeshCount << std::endl;
+        return filteredMesh;
+    }
+
+    void ApplySubMeshFilterFromEnv()
+    {
+        uint32_t subMeshIndex = 0;
+        if (!TryGetSubMeshIndexFromEnv(subMeshIndex)) {
+            return;
+        }
+
+        MeshSelector meshSelector;
+        if (!TryGetMeshSelectorFromEnv(meshSelector)) {
+            return;
+        }
+
+        auto* renderMeshManager = GetManager<IRenderMeshComponentManager>(*ecs_);
+        auto* meshManager = GetManager<IMeshComponentManager>(*ecs_);
+        if (!renderMeshManager || !meshManager) {
+            std::cout << "subMesh: mesh component managers not found" << std::endl;
+            return;
+        }
+
+        vector<std::pair<Entity, Entity>> filteredMeshes;
+        vector<Entity> renderMeshesToRemove;
+        uint32_t updatedRenderMeshes = 0;
+        const auto renderMeshCount = renderMeshManager->GetComponentCount();
+        for (IComponentManager::ComponentId id = 0; id < renderMeshCount; ++id) {
+            const Entity renderMeshEntity = renderMeshManager->GetEntity(id);
+            if (!EntityUtil::IsValid(renderMeshEntity)) {
+                continue;
+            }
+
+            auto renderMeshHandle = renderMeshManager->Read(renderMeshEntity);
+            if (!renderMeshHandle || !EntityUtil::IsValid(renderMeshHandle->mesh)) {
+                continue;
+            }
+
+            if (!MeshMatchesSelector(renderMeshHandle->mesh, meshSelector)) {
+                renderMeshesToRemove.push_back(renderMeshEntity);
+                continue;
+            }
+
+            const Entity filteredMesh = GetOrCreateFilteredMeshCopy(renderMeshHandle->mesh, subMeshIndex, filteredMeshes);
+            if (!EntityUtil::IsValid(filteredMesh)) {
+                continue;
+            }
+
+            auto writeRenderMeshHandle = renderMeshManager->Write(renderMeshEntity);
+            if (writeRenderMeshHandle) {
+                writeRenderMeshHandle->mesh = filteredMesh;
+                ++updatedRenderMeshes;
+            }
+        }
+
+        for (const Entity entity : renderMeshesToRemove) {
+            renderMeshManager->Destroy(entity);
+        }
+
+        if (updatedRenderMeshes == 0) {
+            std::cout << "subMesh: no render mesh matched mesh='" << meshSelector.value.c_str() << "'" << std::endl;
+        }
+
+        std::cout << "subMesh: updated " << updatedRenderMeshes << " render mesh component(s), removed "
+                  << renderMeshesToRemove.size() << " non-selected render mesh component(s)" << std::endl;
     }
 
     void SaveOptimizedTextures()
