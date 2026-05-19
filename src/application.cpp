@@ -276,11 +276,13 @@ private:
         if (updateCamera_ && cameraManager_) {
             updateCamera_ = false;
             activeCamera_ = cameraEntity_;
-            auto cameraHandle = cameraManager_->Write(activeCamera_);
-            if (cameraHandle) {
-                cameraHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
-                cameraHandle->renderingPipeline = CameraComponent::RenderingPipeline::CUSTOM;
-                cameraHandle->customRenderNodeGraphFile = "pt://rendernodegraphs/core3d_rng_cam_scene_deferred.rng";
+            {
+                auto cameraHandle = cameraManager_->Write(activeCamera_);
+                if (cameraHandle) {
+                    cameraHandle->sceneFlags |= CameraComponent::SceneFlagBits::MAIN_CAMERA_BIT;
+                    cameraHandle->renderingPipeline = CameraComponent::RenderingPipeline::CUSTOM;
+                    cameraHandle->customRenderNodeGraphFile = "pt://rendernodegraphs/core3d_rng_cam_scene_deferred.rng";
+                }
             }
             const auto& sceneUtil = graphicsContext_->GetSceneUtil();
             sceneUtil.UpdateCameraViewport(*ecs_, activeCamera_, { windowWidth_, windowHeight_ }, false, 60.f, 1.f);
