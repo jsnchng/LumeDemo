@@ -4,3 +4,4 @@
 *.*.spv.gles
 *.*.spv.lsb
 build/
+.vs/

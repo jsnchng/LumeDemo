@@ -86,30 +86,14 @@ set_target_properties(PluginLumePT PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>/plugins)
 
 #
-# Target: DemoCommon
-#
-add_library(DemoCommon
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_include_directories(DemoCommon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(DemoCommon PRIVATE
-  AGPBase::AGPBaseAPI
-  AGPEngine::AGPEngineAPI
-  AGPRender::AGPRenderAPI)
-target_link_libraries(DemoCommon PUBLIC
-  Vulkan::Vulkan)
-target_compile_definitions(DemoCommon PUBLIC RENDER_HAS_VULKAN_BACKEND=1)
-target_compile_definitions(DemoCommon PUBLIC NOMINMAX)
-
-#
 # Target: LumeDemo.exe
 #
-add_executable(LumeDemo src/application.cpp)
+add_executable(LumeDemo src/main.cpp)
 target_include_directories(LumeDemo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 add_dependencies(LumeDemo
   PluginAGPRender
   PluginAGP3D
-  PluginLumePT
-  DemoCommon)
+  PluginLumePT)
 target_link_libraries(LumeDemo PRIVATE
   AGPBase::AGPBaseAPI
   AGPEngine::AGPEngineAPI
@@ -118,7 +102,9 @@ target_link_libraries(LumeDemo PRIVATE
   LumePT::LumePTAPI
   AGPEngine::AGPEngineDLL
   AGPEngine::ComponentHelperSDK
-  DemoCommon)
+  Vulkan::Vulkan)
+target_compile_definitions(LumeDemo PRIVATE RENDER_HAS_VULKAN_BACKEND=1)
+target_compile_definitions(LumeDemo PRIVATE NOMINMAX)
 
 add_custom_target(CopyAssets ALL
   COMMAND ${CMAKE_COMMAND} -E copy_directory
